@@ -15,8 +15,13 @@ export const AuthProvider = ({ children }) => {
           const response = await api.get('/accounts/me/');
           setUser(response.data);
         } catch (error) {
-          console.error("Failed to fetch user profile", error);
-          logout();
+          if (error?.response?.status === 404) {
+            console.warn("User profile missing; proceeding without profile.");
+            setUser(null);
+          } else {
+            console.error("Failed to fetch user profile", error);
+            logout();
+          }
         }
       }
       setLoading(false);
