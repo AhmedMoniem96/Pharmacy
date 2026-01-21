@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/api/axios';
@@ -9,7 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+type PurchaseOrderFormValues = {
+  reference: string;
+  supplier: string;
+  status: string;
+};
 
 export const PurchaseOrders: React.FC = () => {
   const { t } = useTranslation();
@@ -19,18 +26,55 @@ export const PurchaseOrders: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const { register, handleSubmit, reset, setValue } = useForm();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    control,
+    formState: { errors }
+  } = useForm<PurchaseOrderFormValues>({
+    defaultValues: {
+      reference: '',
+      supplier: '',
+      status: ''
+    }
+  });
 
-  const { data: purchaseOrders, isLoading } = useQuery({
+  const statusOptions = useMemo(
+    () => [
+      { value: 'DRAFT', label: 'Draft' },
+      { value: 'SENT', label: 'Sent' },
+      { value: 'RECEIVED', label: 'Received' },
+      { value: 'CANCELED', label: 'Canceled' }
+    ],
+    []
+  );
+
+  const { data: purchaseOrders, isLoading, isFetching } = useQuery({
     queryKey: ['purchaseOrdersList', search],
     queryFn: async () => {
       const res = await api.get(`/purchases/purchase-orders/?search=${search}`);
       return res.data.results || res.data;
     },
+    onError: () => {
+      toast({ variant: 'destructive', title: t('error'), description: 'Failed to load purchase orders' });
+    }
+  });
+
+  const { data: suppliers, isLoading: suppliersLoading } = useQuery({
+    queryKey: ['purchaseOrderSuppliers'],
+    queryFn: async () => {
+      const res = await api.get('/purchases/suppliers/');
+      return res.data.results || res.data;
+    },
+    onError: () => {
+      toast({ variant: 'destructive', title: t('error'), description: 'Failed to load suppliers' });
+    }
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: PurchaseOrderFormValues) => {
       if (editingId) {
         return api.put(`/purchases/purchase-orders/${editingId}/`, data);
       }
@@ -53,14 +97,17 @@ export const PurchaseOrders: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchaseOrdersList'] });
       toast({ title: t('success'), description: 'Purchase Order deleted' });
+    },
+    onError: () => {
+      toast({ variant: 'destructive', title: t('error'), description: 'Failed to delete Purchase Order' });
     }
   });
 
   const handleEdit = (po: any) => {
     setEditingId(po.id);
-    setValue('reference', po.reference);
-    setValue('supplier', po.supplier); // This would ideally be a supplier ID
-    setValue('status', po.status);
+    setValue('reference', po.reference || po.po_no || '');
+    setValue('supplier', String(po.supplier_id ?? po.supplier ?? ''));
+    setValue('status', po.status || '');
     setIsModalOpen(true);
   };
 
@@ -70,9 +117,11 @@ export const PurchaseOrders: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: PurchaseOrderFormValues) => {
     mutation.mutate(data);
   };
+
+  const orders = purchaseOrders ?? [];
 
   return (
     <div className="space-y-4">
@@ -88,6 +137,9 @@ export const PurchaseOrders: React.FC = () => {
           value={search} 
           onChange={(e) => setSearch(e.target.value)} 
         />
+        {isFetching && !isLoading && (
+          <span className="text-xs text-muted-foreground">{t('loading')}</span>
+        )}
       </div>
 
       <div className="border rounded-md">
@@ -105,21 +157,32 @@ export const PurchaseOrders: React.FC = () => {
               <TableRow>
                 <TableCell colSpan={4} className="text-center">{t('loading')}</TableCell>
               </TableRow>
-            ) : purchaseOrders?.length === 0 ? (
+            ) : orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center">{t('no_data')}</TableCell>
+                <TableCell colSpan={4} className="text-center">
+                  <div className="flex flex-col items-center gap-1 py-4 text-muted-foreground">
+                    <span>{t('no_data')}</span>
+                    <span className="text-xs">Try adjusting your search.</span>
+                  </div>
+                </TableCell>
               </TableRow>
             ) : (
-              purchaseOrders?.map((po: any) => (
+              orders.map((po: any) => (
                 <TableRow key={po.id}>
-                  <TableCell className="font-medium">{po.reference}</TableCell>
-                  <TableCell>{po.supplier_name || po.supplier}</TableCell> {/* Assuming supplier_name or just ID */}
+                  <TableCell className="font-medium">{po.reference || po.po_no}</TableCell>
+                  <TableCell>{po.supplier_name || po.supplier || '—'}</TableCell>
                   <TableCell>{po.status}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(po)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteMutation.mutate(po.id)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive"
+                      disabled={deleteMutation.isPending}
+                      onClick={() => deleteMutation.mutate(po.id)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -130,7 +193,16 @@ export const PurchaseOrders: React.FC = () => {
         </Table>
       </div>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (!open) {
+            reset();
+            setEditingId(null);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingId ? t('edit') : t('create')} {t('purchase_order')}</DialogTitle>
@@ -139,18 +211,67 @@ export const PurchaseOrders: React.FC = () => {
             <div className="space-y-2">
               <Label>{t('reference')}</Label>
               <Input {...register('reference', { required: true })} />
+              {errors.reference && (
+                <p className="text-sm text-destructive">This field is required.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>{t('supplier')}</Label>
-              <Input {...register('supplier', { required: true })} /> {/* This should be a select for supplier ID */}
+              <Controller
+                control={control}
+                name="supplier"
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={suppliersLoading}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('supplier')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers?.length ? (
+                        suppliers.map((supplier: any) => (
+                          <SelectItem key={supplier.id} value={String(supplier.id)}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>
+                          {suppliersLoading ? t('loading') : t('no_data')}
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.supplier && (
+                <p className="text-sm text-destructive">This field is required.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>{t('status')}</Label>
-              <Input {...register('status')} /> {/* This should be a select for status */}
+              <Controller
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('status')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>{t('cancel')}</Button>
-              <Button type="submit">{t('save')}</Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? t('loading') : t('save')}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
