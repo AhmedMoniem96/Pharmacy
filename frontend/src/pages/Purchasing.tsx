@@ -13,15 +13,23 @@ export const Purchasing: React.FC = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">{t('purchasing')}</h1>
-      
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="suppliers">{t('supplier')}</TabsTrigger>
-          <TabsTrigger value="orders">{t('purchase_order')}</TabsTrigger>
-          <TabsTrigger value="receipts">{t('goods_receipt')}</TabsTrigger>
-          <TabsTrigger value="invoices">{t('supplier_invoice')}</TabsTrigger>
+          <TabsTrigger value="suppliers">
+            {t('suppliers', { defaultValue: 'Suppliers' })}
+          </TabsTrigger>
+          <TabsTrigger value="orders">
+            {t('purchase_orders', { defaultValue: 'Purchase Orders' })}
+          </TabsTrigger>
+          <TabsTrigger value="receipts">
+            {t('goods_receipts', { defaultValue: 'Goods Receipts' })}
+          </TabsTrigger>
+          <TabsTrigger value="invoices">
+            {t('supplier_invoices', { defaultValue: 'Supplier Invoices' })}
+          </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="suppliers" className="space-y-4">
           <Suppliers />
         </TabsContent>
