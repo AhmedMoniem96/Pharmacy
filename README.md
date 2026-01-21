@@ -66,6 +66,11 @@ Master data:
 Inventory:
 - `/api/inventory/batches/`
 - `/api/inventory/stock-ledger/` (read-only)
+- `POST /api/inventory/receive/`
+- `POST /api/inventory/transfer/`
+- `POST /api/inventory/adjust/`
+- `GET /api/inventory/alerts/low-stock/?warehouse=<warehouse_id>`
+- `GET /api/inventory/alerts/near-expiry/?warehouse=<warehouse_id>&days=30`
 
 All endpoints are JWT protected except `/api/health/`.
 
@@ -106,4 +111,85 @@ DEMO_CASHIER_PASSWORD=cashier123
 ```bash
 cd backend
 python manage.py test
+```
+
+## Inventory actions (Step B)
+
+Sales and stock deductions use FEFO (earliest expiry first). Expired batches are blocked unless the user profile has `can_sell_expired=true` or the service is called with `allow_expired=true`.
+
+Receive stock:
+
+```bash
+curl -X POST http://localhost:8000/api/inventory/receive/ \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "warehouse": 1,
+    "ref_type": "PURCHASE",
+    "ref_id": "PO-1001",
+    "note": "Initial receipt",
+    "items": [
+      {
+        "product": 1,
+        "batch_no": "B-001",
+        "expiry_date": "2030-01-01",
+        "purchase_price": "5.00",
+        "selling_price": "8.00",
+        "qty": "10.00"
+      }
+    ]
+  }'
+```
+
+Transfer stock:
+
+```bash
+curl -X POST http://localhost:8000/api/inventory/transfer/ \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from_warehouse": 1,
+    "to_warehouse": 2,
+    "ref_type": "TRANSFER",
+    "ref_id": "TR-1001",
+    "note": "Rebalance",
+    "items": [
+      {
+        "batch": 10,
+        "qty": "5.00"
+      }
+    ]
+  }'
+```
+
+Adjust stock:
+
+```bash
+curl -X POST http://localhost:8000/api/inventory/adjust/ \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "warehouse": 1,
+    "reason": "Cycle count",
+    "items": [
+      {
+        "batch": 10,
+        "qty": "-2.00"
+      }
+    ]
+  }'
+```
+
+Low stock alert:
+
+```bash
+curl -X GET "http://localhost:8000/api/inventory/alerts/low-stock/?warehouse=1" \
+  -H "Authorization: Bearer <token>"
+```
+
+Near expiry alert:
+
+```bash
+curl -X GET "http://localhost:8000/api/inventory/alerts/near-expiry/?warehouse=1&days=30" \
+  -H "Authorization: Bearer <token>"
 ```
