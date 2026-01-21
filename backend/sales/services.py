@@ -135,6 +135,10 @@ def create_sale_invoice(
                     for payment in payments
                 ]
             )
+        if invoice.status == SaleInvoice.Status.PAID and not invoice.gl_entry_id:
+            from accounting.services import post_sale_to_gl
+
+            post_sale_to_gl(invoice, user)
         return invoice
 
 
@@ -171,6 +175,10 @@ def add_payment(*, company, invoice, payments, user):
         else:
             invoice.status = SaleInvoice.Status.DRAFT
         invoice.save(update_fields=["status"])
+        if invoice.status == SaleInvoice.Status.PAID and not invoice.gl_entry_id:
+            from accounting.services import post_sale_to_gl
+
+            post_sale_to_gl(invoice, user)
         return invoice
 
 

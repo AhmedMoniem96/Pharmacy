@@ -16,7 +16,7 @@ from .serializers import (
     SupplierInvoiceSerializer,
     SupplierSerializer,
 )
-from .services import post_goods_receipt
+from .services import post_goods_receipt, post_supplier_invoice
 
 
 class SupplierViewSet(viewsets.ModelViewSet):
@@ -134,3 +134,20 @@ class SupplierInvoiceViewSet(viewsets.ModelViewSet):
         if self.action in {"list", "retrieve"}:
             return SupplierInvoiceSerializer
         return SupplierInvoiceCreateSerializer
+
+    @action(methods=["post"], detail=True, permission_classes=[PurchasePermission])
+    def post(self, request, pk=None):
+        invoice = self.get_object()
+        posted = post_supplier_invoice(
+            company=get_user_company(request.user),
+            invoice=invoice,
+            user=request.user,
+        )
+        return Response(
+            {
+                "id": posted.id,
+                "supplier_invoice_no": posted.supplier_invoice_no,
+                "status": posted.status,
+            },
+            status=status.HTTP_200_OK,
+        )

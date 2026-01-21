@@ -85,6 +85,12 @@ Purchasing (Step D):
 - `/api/purchases/goods-receipts/`
 - `/api/purchases/goods-receipts/<id>/post/`
 - `/api/purchases/supplier-invoices/`
+- `/api/purchases/supplier-invoices/<id>/post/`
+
+Accounting (Step E):
+- `/api/accounting/accounts/`
+- `/api/accounting/journals/`
+- `/api/accounting/entries/`
 
 All endpoints are JWT protected except `/api/health/`.
 
@@ -94,7 +100,7 @@ All endpoints are JWT protected except `/api/health/`.
 - **MANAGER**: POS returns/voids + read access.
 - **CASHIER**: create sales, add payments, view receipts.
 - **INVENTORY**: CRUD batches; stock ledger creation later.
-- **ACCOUNTANT**: read-only for now; accounting endpoints later.
+- **ACCOUNTANT**: read-only access to accounting endpoints.
 
 Access scoping:
 - `allowed_branches`/`allowed_warehouses` on `UserProfile` default to **all** in the company when empty.
@@ -189,6 +195,24 @@ Access scoping:
   ]
 }
 ```
+
+## Accounting (Step E MVP)
+
+Seed the chart of accounts and journals (per company):
+
+```bash
+cd backend
+python manage.py seed_chart_of_accounts
+```
+
+Posting rules (current MVP):
+- Sales are auto-posted to GL when invoices are **PAID** and fully paid.
+- Supplier invoices are auto-posted when they are **POSTED**.
+- No accounts receivable/payments module yet; partial sales remain unposted.
+
+GL auto-posting:
+- Sales: DR Cash, CR Sales Revenue, CR Output VAT (if any).
+- Purchases: DR Purchases Expense, DR Input VAT (if any), CR Accounts Payable.
 
 ## Seed demo data (dev only)
 
