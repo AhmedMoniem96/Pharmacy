@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Container, Box, TextField, Button, Typography, Alert, Paper, Link, Grid } from '@mui/material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import api from '../api/axios';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -12,6 +15,7 @@ export default function Register() {
   });
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -22,15 +26,13 @@ export default function Register() {
     setError('');
     try {
       await api.post('/auth/register/', formData);
-      // After registration, redirect to login or auto-login
-      navigate('/login', { state: { message: 'Registration successful! Please log in.' } });
+      navigate('/login', { state: { message: t('success_register') } });
     } catch (err) {
       console.error(err);
       if (err.response && err.response.data) {
-          // Handle specific field errors if possible, for now just dump data
           setError(JSON.stringify(err.response.data));
       } else {
-          setError('Registration failed. Please try again.');
+          setError(t('error_register'));
       }
     }
   };
@@ -42,15 +44,21 @@ export default function Register() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0d47a1 0%, #1976d2 100%)',
+        background: 'linear-gradient(135deg, #004d40 0%, #00251a 100%)',
         py: 4,
+        position: 'relative'
       }}
     >
+      <Box sx={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 1 }}>
+        <ThemeToggle />
+        <LanguageSwitcher />
+      </Box>
+
       <Container maxWidth="sm">
-        <Paper elevation={6} sx={{ p: 4, borderRadius: 2 }}>
+        <Paper elevation={12} sx={{ p: 4, borderRadius: 4, backdropFilter: 'blur(10px)', backgroundColor: 'rgba(255, 255, 255, 0.9)' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Typography component="h1" variant="h4" color="primary" gutterBottom>
-              Create Account
+            <Typography component="h1" variant="h4" color="primary" gutterBottom fontWeight="bold">
+              {t('create_account')}
             </Typography>
             <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
               Start managing your pharmacy today
@@ -63,7 +71,7 @@ export default function Register() {
                   <TextField
                     required
                     fullWidth
-                    label="Company Name"
+                    label={t('company_name')}
                     name="company_name"
                     value={formData.company_name}
                     onChange={handleChange}
@@ -73,7 +81,7 @@ export default function Register() {
                   <TextField
                     required
                     fullWidth
-                    label="Username"
+                    label={t('username')}
                     name="username"
                     value={formData.username}
                     onChange={handleChange}
@@ -83,7 +91,7 @@ export default function Register() {
                   <TextField
                     required
                     fullWidth
-                    label="Email Address"
+                    label={t('email')}
                     name="email"
                     type="email"
                     value={formData.email}
@@ -94,7 +102,7 @@ export default function Register() {
                   <TextField
                     required
                     fullWidth
-                    label="Password"
+                    label={t('password')}
                     name="password"
                     type="password"
                     value={formData.password}
@@ -110,12 +118,12 @@ export default function Register() {
                 size="large"
                 sx={{ mt: 4, mb: 2, py: 1.5, fontSize: '1.1rem' }}
               >
-                Register
+                {t('register')}
               </Button>
               <Grid container justify="flex-end">
                 <Grid item>
                   <Link component={RouterLink} to="/login" variant="body2">
-                    Already have an account? Sign in
+                    {t('already_have_account')} {t('sign_in')}
                   </Link>
                 </Grid>
               </Grid>
