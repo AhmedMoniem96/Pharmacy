@@ -11,6 +11,13 @@ import { useToast } from '@/components/ui/use-toast';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
+type SupplierFormValues = {
+  name: string;
+  contact_person?: string;
+  phone?: string;
+  email?: string;
+};
+
 export const Suppliers: React.FC = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -19,9 +26,22 @@ export const Suppliers: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const { register, handleSubmit, reset, setValue } = useForm();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors }
+  } = useForm<SupplierFormValues>({
+    defaultValues: {
+      name: '',
+      contact_person: '',
+      phone: '',
+      email: ''
+    }
+  });
 
-  const { data: suppliers, isLoading } = useQuery({
+  const { data: suppliers, isLoading, isFetching } = useQuery({
     queryKey: ['suppliersList', search],
     queryFn: async () => {
       const res = await api.get(`/purchases/suppliers/?search=${search}`);
@@ -30,7 +50,7 @@ export const Suppliers: React.FC = () => {
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: SupplierFormValues) => {
       if (editingId) {
         return api.put(`/purchases/suppliers/${editingId}/`, data);
       }
@@ -53,6 +73,9 @@ export const Suppliers: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliersList'] });
       toast({ title: t('success'), description: 'Supplier deleted' });
+    },
+    onError: () => {
+      toast({ variant: 'destructive', title: t('error'), description: 'Failed to delete supplier' });
     }
   });
 
@@ -71,7 +94,7 @@ export const Suppliers: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: SupplierFormValues) => {
     mutation.mutate(data);
   };
 
@@ -89,6 +112,9 @@ export const Suppliers: React.FC = () => {
           value={search} 
           onChange={(e) => setSearch(e.target.value)} 
         />
+        {isFetching && !isLoading && (
+          <span className="text-xs text-muted-foreground">{t('loading')}</span>
+        )}
       </div>
 
       <div className="border rounded-md">
@@ -109,7 +135,12 @@ export const Suppliers: React.FC = () => {
               </TableRow>
             ) : suppliers?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center">{t('no_data')}</TableCell>
+                <TableCell colSpan={5} className="text-center">
+                  <div className="flex flex-col items-center gap-1 py-4 text-muted-foreground">
+                    <span>{t('no_data')}</span>
+                    <span className="text-xs">Try adjusting your search.</span>
+                  </div>
+                </TableCell>
               </TableRow>
             ) : (
               suppliers?.map((supplier: any) => (
@@ -122,7 +153,13 @@ export const Suppliers: React.FC = () => {
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(supplier)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteMutation.mutate(supplier.id)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive"
+                      disabled={deleteMutation.isPending}
+                      onClick={() => deleteMutation.mutate(supplier.id)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -133,7 +170,16 @@ export const Suppliers: React.FC = () => {
         </Table>
       </div>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (!open) {
+            reset();
+            setEditingId(null);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingId ? t('edit') : t('create')} {t('supplier')}</DialogTitle>
@@ -142,6 +188,9 @@ export const Suppliers: React.FC = () => {
             <div className="space-y-2">
               <Label>{t('name')}</Label>
               <Input {...register('name', { required: true })} />
+              {errors.name && (
+                <p className="text-sm text-destructive">This field is required.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>{t('contact_person')}</Label>
@@ -156,8 +205,12 @@ export const Suppliers: React.FC = () => {
               <Input type="email" {...register('email')} />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>{t('cancel')}</Button>
-              <Button type="submit">{t('save')}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                {t('cancel')}
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? t('loading') : t('save')}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
