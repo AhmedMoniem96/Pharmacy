@@ -10,6 +10,7 @@ class ZATCAInvoiceLog(models.Model):
     status = models.CharField(max_length=50)
     error = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self) -> str:
         return f"ZATCA {self.ref} ({self.status})"
@@ -22,6 +23,7 @@ class RSDTransmissionLog(models.Model):
     status = models.CharField(max_length=50)
     error = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self) -> str:
         return f"RSD {self.ref} ({self.status})"

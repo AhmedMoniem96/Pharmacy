@@ -98,3 +98,26 @@ class ReportsPermission(BasePermission):
             UserProfile.Role.MANAGER,
             UserProfile.Role.ACCOUNTANT,
         }
+
+
+class ComplianceSendPermission(BasePermission):
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        role = _get_role(request.user)
+        return request.user.is_superuser or role in {
+            UserProfile.Role.ADMIN,
+            UserProfile.Role.MANAGER,
+        }
+
+
+class ComplianceLogPermission(BasePermission):
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        role = _get_role(request.user)
+        return request.user.is_superuser or role in {
+            UserProfile.Role.ADMIN,
+            UserProfile.Role.MANAGER,
+            UserProfile.Role.ACCOUNTANT,
+        }

@@ -102,6 +102,14 @@ Reporting (Step F):
 - `GET /api/reports/finance/pnl/?from=YYYY-MM-DD&to=YYYY-MM-DD`
 - `GET /api/reports/finance/vat/?from=YYYY-MM-DD&to=YYYY-MM-DD`
 
+Compliance (Step G, stub only — no external API calls):
+- `POST /api/compliance/zatca/invoices/<invoice_id>/send/`
+- `GET /api/compliance/zatca/logs/`
+- `GET /api/compliance/zatca/logs/<log_id>/`
+- `POST /api/compliance/rsd/movements/send/`
+- `GET /api/compliance/rsd/logs/`
+- `GET /api/compliance/rsd/logs/<log_id>/`
+
 All endpoints are JWT protected except `/api/health/`.
 
 ## Role rules (current)
@@ -139,6 +147,36 @@ Access scoping:
     {"method": "CASH", "amount": "50.00"}
   ]
 }
+```
+
+## Compliance examples (Step G)
+
+**Note:** these endpoints are stubs only; no external API calls are made.
+
+### ZATCA send invoice
+
+```bash
+curl -X POST http://localhost:8000/api/compliance/zatca/invoices/101/send/ \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json"
+```
+
+### RSD send by stock ledger IDs
+
+```bash
+curl -X POST http://localhost:8000/api/compliance/rsd/movements/send/ \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"stock_ledger_ids": [1, 2, 3]}'
+```
+
+### RSD send by reference
+
+```bash
+curl -X POST http://localhost:8000/api/compliance/rsd/movements/send/ \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"ref_type": "SALE", "ref_id": "20260121-0001"}'
 ```
 
 ### Receipt JSON example
