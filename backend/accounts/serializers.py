@@ -5,6 +5,7 @@ from masterdata.models import Branch, Company, Warehouse
 
 from .models import UserProfile, scoped_branches, scoped_warehouses
 
+User = get_user_model()
 
 class CompanyBriefSerializer(serializers.ModelSerializer):
     class Meta:
@@ -57,3 +58,26 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ("id", "username", "email")
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    company_name = serializers.CharField(write_only=True, required=True)
+    email = serializers.EmailField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('username', 'password', 'email', 'company_name')
+
+    def create(self, validated_data):
+        company_name = validated_data.pop('company_name')
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            password=validated_data['password'],
+            email=validated_data['email']
+        )
+        
+        company = Company.objects.create(name=company_name)
+        # Default to ADMIN role for the creator of the company
+        UserProfile.objects.create(user=user, company=company, role='ADMIN')
+            
+        return user
