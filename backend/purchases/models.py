@@ -143,6 +143,13 @@ class SupplierInvoice(models.Model):
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     tax_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     grand_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    gl_entry = models.ForeignKey(
+        "accounting.JournalEntry",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="supplier_invoices",
+    )
     ref_grn = models.ForeignKey(
         GoodsReceipt,
         on_delete=models.SET_NULL,

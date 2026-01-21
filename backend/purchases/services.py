@@ -207,3 +207,19 @@ def create_supplier_invoice(
             created_by=user,
         )
         return invoice
+
+
+def post_supplier_invoice(*, company, invoice, user):
+    _ensure_company(company)
+    if invoice.company_id != company.id:
+        raise serializers.ValidationError("Supplier invoice does not belong to your company.")
+    if invoice.status != SupplierInvoice.Status.DRAFT:
+        raise serializers.ValidationError("Only draft supplier invoices can be posted.")
+
+    with transaction.atomic():
+        invoice.status = SupplierInvoice.Status.POSTED
+        invoice.save(update_fields=["status"])
+        from accounting.services import post_purchase_to_gl
+
+        post_purchase_to_gl(invoice, user)
+        return invoice

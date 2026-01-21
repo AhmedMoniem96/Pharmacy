@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from accounts.views import MeView
+from accounting.views import AccountViewSet, JournalEntryViewSet, JournalViewSet
 from inventory.views import (
     AdjustStockView,
     BatchViewSet,
@@ -44,6 +45,9 @@ router.register(r"masterdata/manufacturers", ManufacturerViewSet, basename="manu
 router.register(r"masterdata/products", ProductViewSet, basename="product")
 router.register(r"inventory/batches", BatchViewSet, basename="batch")
 router.register(r"inventory/stock-ledger", StockLedgerViewSet, basename="stock-ledger")
+router.register(r"accounting/accounts", AccountViewSet, basename="accounting-account")
+router.register(r"accounting/journals", JournalViewSet, basename="accounting-journal")
+router.register(r"accounting/entries", JournalEntryViewSet, basename="accounting-entry")
 router.register(r"purchases/suppliers", SupplierViewSet, basename="supplier")
 router.register(r"purchases/purchase-orders", PurchaseOrderViewSet, basename="purchase-order")
 router.register(r"purchases/goods-receipts", GoodsReceiptViewSet, basename="goods-receipt")

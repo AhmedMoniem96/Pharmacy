@@ -33,6 +33,13 @@ class SaleInvoice(models.Model):
     discount_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     tax_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     grand_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    gl_entry = models.ForeignKey(
+        "accounting.JournalEntry",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sale_invoices",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="sale_invoices"
     )
