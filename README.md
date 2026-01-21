@@ -30,8 +30,80 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-## API endpoints (foundation)
+## Authentication (JWT)
+
+Obtain a token:
+
+```bash
+curl -X POST http://localhost:8000/api/auth/token/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "admin123"}'
+```
+
+Refresh a token:
+
+```bash
+curl -X POST http://localhost:8000/api/auth/token/refresh/ \
+  -H "Content-Type: application/json" \
+  -d '{"refresh": "<refresh_token>"}'
+```
+
+## API endpoints
 
 - `GET /api/health/` — health check
+- `POST /api/auth/token/` — obtain JWT access/refresh tokens
+- `POST /api/auth/token/refresh/` — refresh access token
+- `GET /api/accounts/me/` — current user profile + company scope
 
-Future endpoints will follow `/api/<module>/...` for master data, inventory, sales, purchases, accounting, reports, and compliance.
+Master data:
+- `/api/masterdata/companies/` (superuser only)
+- `/api/masterdata/branches/`
+- `/api/masterdata/warehouses/`
+- `/api/masterdata/categories/`
+- `/api/masterdata/manufacturers/`
+- `/api/masterdata/products/`
+
+Inventory:
+- `/api/inventory/batches/`
+- `/api/inventory/stock-ledger/` (read-only)
+
+All endpoints are JWT protected except `/api/health/`.
+
+## Role rules (current)
+
+- **ADMIN**: CRUD everything within their company.
+- **MANAGER**: read-only for now (future extensions in Step B).
+- **CASHIER**: read products/batches and warehouse scope; sales endpoints later.
+- **INVENTORY**: CRUD batches; stock ledger creation later.
+- **ACCOUNTANT**: read-only for now; accounting endpoints later.
+
+Access scoping:
+- `allowed_branches`/`allowed_warehouses` on `UserProfile` default to **all** in the company when empty.
+
+## Seed demo data (dev only)
+
+```bash
+cd backend
+python manage.py seed_demo_pharmacy
+```
+
+Default credentials (override with env vars below):
+
+- Admin: `admin` / `admin123`
+- Cashier: `cashier` / `cashier123`
+
+Optional env overrides:
+
+```bash
+DEMO_ADMIN_USERNAME=admin
+DEMO_ADMIN_PASSWORD=admin123
+DEMO_CASHIER_USERNAME=cashier
+DEMO_CASHIER_PASSWORD=cashier123
+```
+
+## Tests
+
+```bash
+cd backend
+python manage.py test
+```
