@@ -42,6 +42,7 @@ class Warehouse(models.Model):
 
 
 class Category(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="categories")
     name = models.CharField(max_length=255)
     parent = models.ForeignKey(
         "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="children"
@@ -52,6 +53,7 @@ class Category(models.Model):
 
 
 class Manufacturer(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="manufacturers")
     name = models.CharField(max_length=255)
 
     def __str__(self) -> str:

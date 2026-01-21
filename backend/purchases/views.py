@@ -1,8 +1,9 @@
 from django.db import transaction
-from rest_framework import serializers, status, viewsets
+from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from accounts.mixins import CompanyScopedModelViewSet
 from accounts.models import get_user_company, scoped_warehouses
 from accounts.permissions import PurchasePermission
 
@@ -19,31 +20,24 @@ from .serializers import (
 from .services import post_goods_receipt, post_supplier_invoice
 
 
-class SupplierViewSet(viewsets.ModelViewSet):
+class SupplierViewSet(CompanyScopedModelViewSet):
     serializer_class = SupplierSerializer
     permission_classes = [PurchasePermission]
 
     def get_queryset(self):
-        company = get_user_company(self.request.user)
-        if not company:
-            return Supplier.objects.none()
-        return Supplier.objects.filter(company=company)
-
-    def perform_create(self, serializer):
-        serializer.save(company=get_user_company(self.request.user))
+        return self.filter_company_queryset(Supplier.objects.all())
 
 
-class PurchaseOrderViewSet(viewsets.ModelViewSet):
+class PurchaseOrderViewSet(CompanyScopedModelViewSet):
     permission_classes = [PurchasePermission]
+    company_create_field = None
 
     def get_queryset(self):
-        company = get_user_company(self.request.user)
         warehouses = scoped_warehouses(self.request.user)
-        if not company:
-            return PurchaseOrder.objects.none()
-        return PurchaseOrder.objects.filter(company=company, warehouse__in=warehouses).select_related(
+        queryset = PurchaseOrder.objects.filter(warehouse__in=warehouses).select_related(
             "branch", "warehouse", "created_by"
         ).prefetch_related("items__product")
+        return self.filter_company_queryset(queryset)
 
     def get_serializer_class(self):
         if self.action in {"list", "retrieve"}:
@@ -63,19 +57,16 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         )
 
 
-class GoodsReceiptViewSet(viewsets.ModelViewSet):
+class GoodsReceiptViewSet(CompanyScopedModelViewSet):
     permission_classes = [PurchasePermission]
+    company_create_field = None
 
     def get_queryset(self):
-        company = get_user_company(self.request.user)
         warehouses = scoped_warehouses(self.request.user)
-        if not company:
-            return GoodsReceipt.objects.none()
-        return (
-            GoodsReceipt.objects.filter(company=company, warehouse__in=warehouses)
-            .select_related("supplier", "warehouse", "created_by", "ref_po")
-            .prefetch_related("items__product")
-        )
+        queryset = GoodsReceipt.objects.filter(warehouse__in=warehouses).select_related(
+            "supplier", "warehouse", "created_by", "ref_po"
+        ).prefetch_related("items__product")
+        return self.filter_company_queryset(queryset)
 
     def get_serializer_class(self):
         if self.action in {"list", "retrieve"}:
@@ -118,17 +109,16 @@ class GoodsReceiptViewSet(viewsets.ModelViewSet):
         )
 
 
-class SupplierInvoiceViewSet(viewsets.ModelViewSet):
+class SupplierInvoiceViewSet(CompanyScopedModelViewSet):
     permission_classes = [PurchasePermission]
+    company_create_field = None
 
     def get_queryset(self):
-        company = get_user_company(self.request.user)
         warehouses = scoped_warehouses(self.request.user)
-        if not company:
-            return SupplierInvoice.objects.none()
-        return SupplierInvoice.objects.filter(
-            company=company, warehouse__in=warehouses
-        ).select_related("supplier", "warehouse", "created_by", "ref_grn")
+        queryset = SupplierInvoice.objects.filter(warehouse__in=warehouses).select_related(
+            "supplier", "warehouse", "created_by", "ref_grn"
+        )
+        return self.filter_company_queryset(queryset)
 
     def get_serializer_class(self):
         if self.action in {"list", "retrieve"}:

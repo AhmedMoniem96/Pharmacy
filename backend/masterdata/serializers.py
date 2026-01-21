@@ -34,15 +34,27 @@ class WarehouseSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    company = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Category
-        fields = ("id", "name", "parent")
+        fields = ("id", "company", "name", "parent")
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+        company = get_user_company(user)
+        parent = attrs.get("parent")
+        if parent and company and parent.company_id != company.id:
+            raise serializers.ValidationError("Parent category does not belong to your company.")
+        return attrs
 
 
 class ManufacturerSerializer(serializers.ModelSerializer):
+    company = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Manufacturer
-        fields = ("id", "name")
+        fields = ("id", "company", "name")
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -69,4 +81,10 @@ class ProductSerializer(serializers.ModelSerializer):
         company = get_user_company(user)
         if not company:
             raise serializers.ValidationError("User is not associated with a company.")
+        category = attrs.get("category")
+        if category and category.company_id != company.id:
+            raise serializers.ValidationError("Category does not belong to your company.")
+        manufacturer = attrs.get("manufacturer")
+        if manufacturer and manufacturer.company_id != company.id:
+            raise serializers.ValidationError("Manufacturer does not belong to your company.")
         return attrs

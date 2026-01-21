@@ -4,10 +4,11 @@ from decimal import Decimal
 from django.db.models import F, Q, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
-from rest_framework import serializers, status, viewsets
+from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.mixins import CompanyScopedModelViewSet, CompanyScopedReadOnlyModelViewSet
 from accounts.models import get_user_company, scoped_warehouses
 from accounts.permissions import BatchPermission
 
@@ -22,30 +23,23 @@ from .serializers import (
 from .services import adjust_stock, receive_stock, transfer_stock
 
 
-class BatchViewSet(viewsets.ModelViewSet):
+class BatchViewSet(CompanyScopedModelViewSet):
     serializer_class = BatchSerializer
     permission_classes = [BatchPermission]
 
     def get_queryset(self):
-        company = get_user_company(self.request.user)
         warehouses = scoped_warehouses(self.request.user)
-        if not company:
-            return Batch.objects.none()
-        return Batch.objects.filter(company=company, warehouse__in=warehouses)
-
-    def perform_create(self, serializer):
-        serializer.save(company=get_user_company(self.request.user))
+        queryset = Batch.objects.filter(warehouse__in=warehouses)
+        return self.filter_company_queryset(queryset)
 
 
-class StockLedgerViewSet(viewsets.ReadOnlyModelViewSet):
+class StockLedgerViewSet(CompanyScopedReadOnlyModelViewSet):
     serializer_class = StockLedgerSerializer
 
     def get_queryset(self):
-        company = get_user_company(self.request.user)
         warehouses = scoped_warehouses(self.request.user)
-        if not company:
-            return StockLedger.objects.none()
-        return StockLedger.objects.filter(company=company, warehouse__in=warehouses)
+        queryset = StockLedger.objects.filter(warehouse__in=warehouses)
+        return self.filter_company_queryset(queryset)
 
 
 class ReceiveStockView(APIView):

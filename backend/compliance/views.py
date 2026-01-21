@@ -3,6 +3,7 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.audit import log_audit_event
 from accounts.models import get_user_company
 from accounts.permissions import ComplianceLogPermission, ComplianceSendPermission
 from inventory.models import StockLedger
@@ -18,6 +19,7 @@ class ZATCAInvoiceSendView(APIView):
 
     def post(self, request, invoice_id):
         company = get_user_company(request.user)
+        force = str(request.query_params.get("force", "")).lower() in {"1", "true", "yes"}
         invoice = (
             SaleInvoice.objects.select_related("branch", "warehouse")
             .prefetch_related("items__product", "payments")
@@ -26,6 +28,13 @@ class ZATCAInvoiceSendView(APIView):
         )
         if not invoice:
             raise serializers.ValidationError("Invoice not found.")
+        if (
+            not force
+            and ZATCAInvoiceLog.objects.filter(
+                company=company, ref=invoice.invoice_no, status="SENT"
+            ).exists()
+        ):
+            raise serializers.ValidationError("Invoice has already been sent.")
         payload = build_zatca_invoice_payload(invoice)
         log = ZATCAInvoiceLog.objects.create(
             company=company,
@@ -36,6 +45,14 @@ class ZATCAInvoiceSendView(APIView):
         log.status = "SENT"
         log.sent_at = timezone.now()
         log.save(update_fields=["status", "sent_at"])
+        log_audit_event(
+            company=company,
+            user=request.user,
+            action="SEND",
+            entity_type="ZATCAInvoiceLog",
+            entity_id=log.id,
+            summary=f"Sent ZATCA invoice {invoice.invoice_no}",
+        )
         return Response(ZATCAInvoiceLogSerializer(log).data, status=status.HTTP_201_CREATED)
 
 
@@ -66,6 +83,7 @@ class RSDMovementSendView(APIView):
         serializer = RSDMovementSendSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         company = get_user_company(request.user)
+        force = str(request.query_params.get("force", "")).lower() in {"1", "true", "yes"}
         ledger_rows = StockLedger.objects.filter(company=company)
         ref_type = serializer.validated_data.get("ref_type")
         ref_id = serializer.validated_data.get("ref_id")
@@ -73,10 +91,17 @@ class RSDMovementSendView(APIView):
         include_non_drug = serializer.validated_data.get("include_non_drug", False)
         if stock_ledger_ids:
             ledger_rows = ledger_rows.filter(id__in=stock_ledger_ids)
-            ref_label = "IDS"
+            ref_label = f"IDS:{','.join(str(item) for item in stock_ledger_ids)}"
         else:
             ledger_rows = ledger_rows.filter(ref_type=ref_type, ref_id=ref_id)
             ref_label = f"{ref_type}:{ref_id}"
+        if (
+            not force
+            and RSDTransmissionLog.objects.filter(
+                company=company, ref=ref_label, status="SENT"
+            ).exists()
+        ):
+            raise serializers.ValidationError("Movement payload has already been sent.")
         ledger_rows = ledger_rows.select_related("product", "batch", "warehouse")
         payload = build_rsd_movement_payload(
             ledger_rows,
@@ -99,6 +124,14 @@ class RSDMovementSendView(APIView):
         log.status = "SENT"
         log.sent_at = timezone.now()
         log.save(update_fields=["status", "sent_at"])
+        log_audit_event(
+            company=company,
+            user=request.user,
+            action="SEND",
+            entity_type="RSDTransmissionLog",
+            entity_id=log.id,
+            summary=f"Sent RSD movement payload {ref_label}",
+        )
         return Response(RSDTransmissionLogSerializer(log).data, status=status.HTTP_201_CREATED)
 
 

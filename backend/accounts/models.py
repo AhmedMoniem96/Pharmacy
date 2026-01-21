@@ -27,6 +27,27 @@ class UserProfile(models.Model):
         return f"{self.user.username} ({self.role})"
 
 
+class AuditLog(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="audit_logs")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    action = models.CharField(max_length=50)
+    entity_type = models.CharField(max_length=100)
+    entity_id = models.CharField(max_length=100, blank=True)
+    summary = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["company", "entity_type", "entity_id"]),
+            models.Index(fields=["company", "timestamp"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.action} {self.entity_type} {self.entity_id}"
+
+
 def get_user_company(user):
     profile = getattr(user, "profile", None)
     return profile.company if profile else None

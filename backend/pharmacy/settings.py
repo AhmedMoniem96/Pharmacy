@@ -10,7 +10,12 @@ load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "change-me")
 DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
-ALLOWED_HOSTS = [host for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",") if host]
+raw_hosts = os.environ.get("DJANGO_ALLOWED_HOSTS", "")
+ALLOWED_HOSTS = [host for host in raw_hosts.split(",") if host]
+if DEBUG and not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ["*"]
+if not DEBUG and "*" in ALLOWED_HOSTS:
+    ALLOWED_HOSTS = [host for host in ALLOWED_HOSTS if host != "*"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -101,6 +106,16 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.ScopedRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.environ.get("THROTTLE_ANON_RATE", "30/min"),
+        "user": os.environ.get("THROTTLE_USER_RATE", "300/min"),
+        "auth_token": os.environ.get("THROTTLE_AUTH_RATE", "60/min"),
+    },
 }
 
 SIMPLE_JWT = {
@@ -114,6 +129,20 @@ CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL", "true").lower() == "tr
 CORS_ALLOWED_ORIGINS = [
     origin for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if origin
 ]
+CSRF_TRUSTED_ORIGINS = [
+    origin for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if origin
+]
+
+if not DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = False
+    SECURE_SSL_REDIRECT = os.environ.get("DJANGO_SECURE_SSL_REDIRECT", "true").lower() == "true"
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "31536000"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 LOGGING = {
     "version": 1,
