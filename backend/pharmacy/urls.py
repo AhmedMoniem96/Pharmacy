@@ -90,5 +90,6 @@ urlpatterns = [
         SaleReceiptView.as_view(),
         name="pos-sale-receipt",
     ),
+    path("api/", include("reports.urls")),
     path("api/", include(router.urls)),
 ]
