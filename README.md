@@ -92,6 +92,16 @@ Accounting (Step E):
 - `/api/accounting/journals/`
 - `/api/accounting/entries/`
 
+Reporting (Step F):
+- `GET /api/reports/sales/summary/?from=YYYY-MM-DD&to=YYYY-MM-DD&group_by=day|month`
+- `GET /api/reports/sales/top-products/?from=YYYY-MM-DD&to=YYYY-MM-DD&limit=20`
+- `GET /api/reports/sales/by-branch/?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `GET /api/reports/payments/methods/?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `GET /api/reports/inventory/stock-on-hand/?warehouse_id=<warehouse_id>`
+- `GET /api/reports/inventory/stock-valuation/?warehouse_id=<warehouse_id>`
+- `GET /api/reports/finance/pnl/?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `GET /api/reports/finance/vat/?from=YYYY-MM-DD&to=YYYY-MM-DD`
+
 All endpoints are JWT protected except `/api/health/`.
 
 ## Role rules (current)
@@ -101,6 +111,7 @@ All endpoints are JWT protected except `/api/health/`.
 - **CASHIER**: create sales, add payments, view receipts.
 - **INVENTORY**: CRUD batches; stock ledger creation later.
 - **ACCOUNTANT**: read-only access to accounting endpoints.
+- **REPORTS**: accessible to **ADMIN**, **MANAGER**, **ACCOUNTANT** roles (cashiers denied).
 
 Access scoping:
 - `allowed_branches`/`allowed_warehouses` on `UserProfile` default to **all** in the company when empty.
@@ -213,6 +224,26 @@ Posting rules (current MVP):
 GL auto-posting:
 - Sales: DR Cash, CR Sales Revenue, CR Output VAT (if any).
 - Purchases: DR Purchases Expense, DR Input VAT (if any), CR Accounts Payable.
+
+## Reporting (Step F MVP)
+
+Report calculations:
+- Sales reports aggregate `SaleInvoice`, `SaleItem`, and `Payment` data by company/date range.
+- VAT report uses posted GL lines on the configured VAT accounts (fallback to account codes 2100/1300).
+- P&L MVP uses posted GL lines on Sales Revenue (code 4000) and Purchases Expense (code 5000).
+
+Example queries:
+
+```bash
+curl -X GET "http://localhost:8000/api/reports/sales/summary/?from=2024-01-01&to=2024-01-31&group_by=day" \
+  -H "Authorization: Bearer <token>"
+
+curl -X GET "http://localhost:8000/api/reports/payments/methods/?from=2024-01-01&to=2024-01-31" \
+  -H "Authorization: Bearer <token>"
+
+curl -X GET "http://localhost:8000/api/reports/inventory/stock-on-hand/?warehouse_id=1" \
+  -H "Authorization: Bearer <token>"
+```
 
 ## Seed demo data (dev only)
 
