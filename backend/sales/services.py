@@ -6,6 +6,7 @@ from django.db import models, transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from accounts.audit import log_audit_event
 from inventory import services as inventory_services
 
 from .models import Payment, SaleInvoice, SaleItem
@@ -139,6 +140,14 @@ def create_sale_invoice(
             from accounting.services import post_sale_to_gl
 
             post_sale_to_gl(invoice, user)
+        log_audit_event(
+            company=company,
+            user=user,
+            action="CREATE",
+            entity_type="SaleInvoice",
+            entity_id=invoice.id,
+            summary=f"Created sale invoice {invoice.invoice_no}",
+        )
         return invoice
 
 
@@ -251,5 +260,13 @@ def return_sale_invoice(*, company, invoice, items, user):
         return_invoice.grand_total = subtotal
         return_invoice.save(
             update_fields=["subtotal", "discount_total", "tax_total", "grand_total"]
+        )
+        log_audit_event(
+            company=company,
+            user=user,
+            action="RETURN",
+            entity_type="SaleInvoice",
+            entity_id=return_invoice.id,
+            summary=f"Returned invoice {invoice.invoice_no} with {return_invoice.invoice_no}",
         )
         return return_invoice

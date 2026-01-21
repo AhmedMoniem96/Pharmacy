@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -21,6 +22,7 @@ class PosSalesServiceTests(TestCase):
         self.warehouse = Warehouse.objects.create(
             branch=self.branch, name="Main Warehouse", code="MAIN-WH"
         )
+        call_command("seed_chart_of_accounts")
         self.product = Product.objects.create(
             company=self.company,
             type=Product.ProductType.DRUG,
@@ -160,6 +162,7 @@ class PosReceiptTests(TestCase):
         self.warehouse = Warehouse.objects.create(
             branch=self.branch, name="Main Warehouse", code="MAIN-WH"
         )
+        call_command("seed_chart_of_accounts")
         self.product = Product.objects.create(
             company=self.company,
             type=Product.ProductType.DRUG,

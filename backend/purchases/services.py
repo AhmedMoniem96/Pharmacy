@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from accounts.audit import log_audit_event
 from inventory import services as inventory_services
 
 from .models import (
@@ -166,6 +167,14 @@ def post_goods_receipt(*, company, goods_receipt, user):
         goods_receipt.status = GoodsReceipt.Status.POSTED
         goods_receipt.received_at = timezone.now()
         goods_receipt.save(update_fields=["status", "received_at"])
+        log_audit_event(
+            company=company,
+            user=user,
+            action="POST",
+            entity_type="GoodsReceipt",
+            entity_id=goods_receipt.id,
+            summary=f"Posted GRN {goods_receipt.grn_no}",
+        )
         return goods_receipt
 
 
@@ -206,6 +215,14 @@ def create_supplier_invoice(
             ref_grn=ref_grn,
             created_by=user,
         )
+        log_audit_event(
+            company=company,
+            user=user,
+            action="CREATE",
+            entity_type="SupplierInvoice",
+            entity_id=invoice.id,
+            summary=f"Created supplier invoice {invoice.supplier_invoice_no}",
+        )
         return invoice
 
 
@@ -222,4 +239,12 @@ def post_supplier_invoice(*, company, invoice, user):
         from accounting.services import post_purchase_to_gl
 
         post_purchase_to_gl(invoice, user)
+        log_audit_event(
+            company=company,
+            user=user,
+            action="POST",
+            entity_type="SupplierInvoice",
+            entity_id=invoice.id,
+            summary=f"Posted supplier invoice {invoice.supplier_invoice_no}",
+        )
         return invoice

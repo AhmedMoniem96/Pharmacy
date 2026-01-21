@@ -25,14 +25,16 @@ class WarehouseAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "parent")
-    search_fields = ("name",)
+    list_display = ("name", "company", "parent")
+    search_fields = ("name", "company__name")
+    list_filter = ("company",)
 
 
 @admin.register(Manufacturer)
 class ManufacturerAdmin(admin.ModelAdmin):
-    list_display = ("name",)
-    search_fields = ("name",)
+    list_display = ("name", "company")
+    search_fields = ("name", "company__name")
+    list_filter = ("company",)
 
 
 @admin.register(Product)

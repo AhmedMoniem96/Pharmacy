@@ -6,6 +6,8 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from accounts.audit import log_audit_event
+
 from .models import Batch, StockLedger
 
 
@@ -25,6 +27,7 @@ def receive_stock(company, warehouse, items, ref_type, ref_id, user, note=None):
             if product.company_id != company.id:
                 raise serializers.ValidationError("Product does not belong to your company.")
             qty = item["qty"]
+            created = False
             try:
                 batch = Batch.objects.select_for_update().get(
                     company=company,
@@ -43,6 +46,7 @@ def receive_stock(company, warehouse, items, ref_type, ref_id, user, note=None):
                     selling_price=item["selling_price"],
                     qty_on_hand=Decimal("0"),
                 )
+                created = True
             batch.expiry_date = item["expiry_date"]
             batch.purchase_price = item["purchase_price"]
             batch.selling_price = item["selling_price"]
@@ -67,6 +71,14 @@ def receive_stock(company, warehouse, items, ref_type, ref_id, user, note=None):
                 ref_id=ref_id,
                 note=note or "",
                 created_by=user,
+            )
+            log_audit_event(
+                company=company,
+                user=user,
+                action="CREATE" if created else "UPDATE",
+                entity_type="Batch",
+                entity_id=batch.id,
+                summary=f"Batch {batch.batch_no} received {qty} for {product.sku}",
             )
             updated_batches.append(batch)
         return updated_batches
@@ -151,6 +163,14 @@ def return_stock(company, warehouse, items, ref_type, ref_id, user, note=None):
                 ref_id=ref_id,
                 note=note or "",
                 created_by=user,
+            )
+            log_audit_event(
+                company=company,
+                user=user,
+                action="UPDATE",
+                entity_type="Batch",
+                entity_id=batch.id,
+                summary=f"Batch {batch.batch_no} returned {qty}",
             )
             updated_batches.append(batch)
         return updated_batches

@@ -18,8 +18,15 @@ DJANGO_DEBUG=true
 DJANGO_ALLOWED_HOSTS=*
 DJANGO_TIME_ZONE=UTC
 CORS_ALLOW_ALL=true
+CORS_ALLOWED_ORIGINS=
+CSRF_TRUSTED_ORIGINS=
 JWT_ACCESS_MINUTES=30
 JWT_REFRESH_DAYS=7
+THROTTLE_ANON_RATE=30/min
+THROTTLE_USER_RATE=300/min
+THROTTLE_AUTH_RATE=60/min
+DJANGO_SECURE_SSL_REDIRECT=true
+DJANGO_HSTS_SECONDS=31536000
 ```
 
 Run migrations and start the server:
@@ -111,6 +118,26 @@ Compliance (Step G, stub only — no external API calls):
 - `GET /api/compliance/rsd/logs/<log_id>/`
 
 All endpoints are JWT protected except `/api/health/`.
+
+## SaaS hardening & ops
+
+### Rate limiting
+
+Default DRF throttles are enabled:
+- Anonymous: `30/min`
+- Authenticated: `300/min`
+- Auth token endpoint (`/api/auth/token/`): `60/min`
+
+Override with `THROTTLE_ANON_RATE`, `THROTTLE_USER_RATE`, and `THROTTLE_AUTH_RATE` environment variables.
+
+### Production checklist
+
+- Set `DJANGO_DEBUG=false` and `DJANGO_SECRET_KEY` to a strong secret.
+- Set `DJANGO_ALLOWED_HOSTS` (no wildcard in production).
+- Configure `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS`.
+- Ensure TLS is terminated (or set `DJANGO_SECURE_SSL_REDIRECT=false` behind trusted proxies).
+- Provide regular database backups and retention policies.
+- Configure log aggregation (stdout logs are enabled by default).
 
 ## Role rules (current)
 

@@ -5,6 +5,8 @@ from decimal import Decimal
 from django.db import models, transaction
 from rest_framework import serializers
 
+from accounts.audit import log_audit_event
+
 from .models import Account, Journal, JournalEntry, JournalLine
 
 ACCOUNT_CASH = "1000"
@@ -103,6 +105,14 @@ def post_sale_to_gl(sale_invoice, user):
         entry.save(update_fields=["posted"])
         sale_invoice.gl_entry = entry
         sale_invoice.save(update_fields=["gl_entry"])
+        log_audit_event(
+            company=sale_invoice.company,
+            user=user,
+            action="POST",
+            entity_type="JournalEntry",
+            entity_id=entry.id,
+            summary=f"Posted sale invoice {sale_invoice.invoice_no} to GL",
+        )
         return entry
 
 
@@ -151,4 +161,12 @@ def post_purchase_to_gl(supplier_invoice, user):
         entry.save(update_fields=["posted"])
         supplier_invoice.gl_entry = entry
         supplier_invoice.save(update_fields=["gl_entry"])
+        log_audit_event(
+            company=supplier_invoice.company,
+            user=user,
+            action="POST",
+            entity_type="JournalEntry",
+            entity_id=entry.id,
+            summary=f"Posted supplier invoice {supplier_invoice.supplier_invoice_no} to GL",
+        )
         return entry
