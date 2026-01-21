@@ -11,6 +11,15 @@ import { useToast } from '@/components/ui/use-toast';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
+type Category = {
+  id: number;
+  name: string;
+};
+
+type CategoryFormValues = {
+  name: string;
+};
+
 export const Categories: React.FC = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -19,18 +28,37 @@ export const Categories: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const { register, handleSubmit, reset, setValue } = useForm();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors }
+  } = useForm<CategoryFormValues>({
+    defaultValues: {
+      name: ''
+    }
+  });
 
-  const { data: categories, isLoading } = useQuery({
+  const {
+    data: categories,
+    isLoading,
+    isError
+  } = useQuery({
     queryKey: ['categoriesList', search],
     queryFn: async () => {
-      const res = await api.get(`/masterdata/categories/?search=${search}`);
+      const res = await api.get('/masterdata/categories/', {
+        params: { search }
+      });
       return res.data.results || res.data;
     },
+    onError: () => {
+      toast({ variant: 'destructive', title: t('error'), description: t('category_load_failed') });
+    }
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: CategoryFormValues) => {
       if (editingId) {
         return api.put(`/masterdata/categories/${editingId}/`, data);
       }
@@ -59,9 +87,9 @@ export const Categories: React.FC = () => {
     }
   });
 
-  const handleEdit = (category: any) => {
+  const handleEdit = (category: Category) => {
     setEditingId(category.id);
-    setValue('name', category.name);
+    reset({ name: category.name });
     setIsModalOpen(true);
   };
 
@@ -71,7 +99,7 @@ export const Categories: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: CategoryFormValues) => {
     mutation.mutate(data);
   };
 
@@ -79,7 +107,9 @@ export const Categories: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold">{t('category_management')}</h2>
-        <Button onClick={handleCreate}><Plus className="mr-2 h-4 w-4" /> {t('add_category')}</Button>
+        <Button onClick={handleCreate} disabled={mutation.isPending}>
+          <Plus className="mr-2 h-4 w-4" /> {t('add_category')}
+        </Button>
       </div>
 
       <div className="flex items-center gap-2 max-w-sm">
@@ -104,19 +134,36 @@ export const Categories: React.FC = () => {
               <TableRow>
                 <TableCell colSpan={2} className="text-center">{t('loading')}</TableCell>
               </TableRow>
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={2} className="text-center text-destructive">
+                  {t('category_load_failed')}
+                </TableCell>
+              </TableRow>
             ) : categories?.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={2} className="text-center">{t('no_data')}</TableCell>
               </TableRow>
             ) : (
-              categories?.map((category: any) => (
+              categories?.map((category: Category) => (
                 <TableRow key={category.id}>
                   <TableCell className="font-medium">{category.name}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(category)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(category)}
+                      disabled={mutation.isPending || deleteMutation.isPending}
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteMutation.mutate(category.id)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive"
+                      onClick={() => deleteMutation.mutate(category.id)}
+                      disabled={mutation.isPending || deleteMutation.isPending}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -136,10 +183,17 @@ export const Categories: React.FC = () => {
             <div className="space-y-2">
               <Label htmlFor="name">{t('category_name')}</Label>
               <Input id="name" {...register('name', { required: true })} />
+              {errors.name ? (
+                <p className="text-sm text-destructive">{t('required_field')}</p>
+              ) : null}
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>{t('cancel')}</Button>
-              <Button type="submit">{t('save')}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={mutation.isPending}>
+                {t('cancel')}
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? t('saving') : t('save')}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
