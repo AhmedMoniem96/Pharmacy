@@ -10,7 +10,7 @@ export const Layout: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
         <main className="flex-1 p-6 overflow-y-auto">
-          <Outlet />
+          <Outlet /> {/* This is where nested routes will be rendered */}
         </main>
       </div>
     </div>
