@@ -23,6 +23,12 @@ from masterdata.views import (
     WarehouseViewSet,
 )
 from sales.views import SaleCreateView, SalePaymentView, SaleReceiptView, SaleReturnView
+from purchases.views import (
+    GoodsReceiptViewSet,
+    PurchaseOrderViewSet,
+    SupplierInvoiceViewSet,
+    SupplierViewSet,
+)
 
 
 def health_check(request):
@@ -38,6 +44,12 @@ router.register(r"masterdata/manufacturers", ManufacturerViewSet, basename="manu
 router.register(r"masterdata/products", ProductViewSet, basename="product")
 router.register(r"inventory/batches", BatchViewSet, basename="batch")
 router.register(r"inventory/stock-ledger", StockLedgerViewSet, basename="stock-ledger")
+router.register(r"purchases/suppliers", SupplierViewSet, basename="supplier")
+router.register(r"purchases/purchase-orders", PurchaseOrderViewSet, basename="purchase-order")
+router.register(r"purchases/goods-receipts", GoodsReceiptViewSet, basename="goods-receipt")
+router.register(
+    r"purchases/supplier-invoices", SupplierInvoiceViewSet, basename="supplier-invoice"
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),

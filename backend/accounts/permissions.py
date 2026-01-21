@@ -61,3 +61,17 @@ class SaleReturnPermission(BasePermission):
             UserProfile.Role.ADMIN,
             UserProfile.Role.MANAGER,
         }
+
+
+class PurchasePermission(BasePermission):
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.method in SAFE_METHODS:
+            return True
+        role = _get_role(request.user)
+        return request.user.is_superuser or role in {
+            UserProfile.Role.ADMIN,
+            UserProfile.Role.MANAGER,
+            UserProfile.Role.INVENTORY,
+        }

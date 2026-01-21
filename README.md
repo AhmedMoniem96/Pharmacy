@@ -78,6 +78,14 @@ POS / Sales (Step C):
 - `POST /api/sales/pos/<invoice_id>/return/` — return/void via compensating invoice
 - `GET /api/sales/pos/<invoice_id>/receipt/` — JSON receipt
 
+Purchasing (Step D):
+- `/api/purchases/suppliers/`
+- `/api/purchases/purchase-orders/`
+- `/api/purchases/purchase-orders/<id>/submit/`
+- `/api/purchases/goods-receipts/`
+- `/api/purchases/goods-receipts/<id>/post/`
+- `/api/purchases/supplier-invoices/`
+
 All endpoints are JWT protected except `/api/health/`.
 
 ## Role rules (current)
@@ -152,6 +160,31 @@ Access scoping:
       "amount": "55.00",
       "reference": "",
       "created_at": "2026-01-21T12:00:00Z"
+    }
+  ]
+}
+```
+
+## Purchasing workflow (Step D)
+
+- Purchase order numbers and GRN numbers are sequential per company and day.
+- Posting a GRN calls `inventory.receive_stock()` to create stock ledger IN movements and update batch quantities.
+
+### GRN payload example
+
+```json
+{
+  "supplier_id": 12,
+  "warehouse_id": 3,
+  "ref_po_id": 7,
+  "items": [
+    {
+      "product_id": 10,
+      "batch_no": "B-2026-001",
+      "expiry_date": "2026-12-31",
+      "qty": "50.00",
+      "unit_cost": "4.50",
+      "selling_price": "7.00"
     }
   ]
 }
