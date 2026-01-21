@@ -1,112 +1,188 @@
-from rest_framework import serializers, status
+from datetime import date
+from decimal import Decimal
+
+from django.db import transaction
+from django.db.models import Max
+from django.shortcuts import get_object_or_404
+from rest_framework import status, views
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from accounts.models import get_user_company, scoped_warehouses
-from accounts.permissions import SalePermission, SaleReturnPermission
-
-from .models import SaleInvoice
+from .models import Payment, SaleInvoice, SaleItem
 from .serializers import (
-    PaymentCreateSerializer,
+    PaymentInputSerializer,
+    ReturnCreateSerializer,
     SaleCreateSerializer,
     SaleInvoiceReceiptSerializer,
-    ReturnCreateSerializer,
 )
-from .services import add_payment, create_sale_invoice, return_sale_invoice
 
-
-class SaleCreateView(APIView):
-    permission_classes = [SalePermission]
+class SaleCreateView(views.APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = SaleCreateSerializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
-        company = get_user_company(request.user)
-        warehouse = serializer.validated_data["warehouse"]
-        if warehouse not in scoped_warehouses(request.user):
-            raise serializers.ValidationError("Warehouse not in your scope.")
-        invoice = create_sale_invoice(
-            company=company,
-            branch=serializer.validated_data["branch"],
-            warehouse=warehouse,
-            items=serializer.validated_data["items"],
-            discount_total=serializer.validated_data.get("discount_total"),
-            tax_total=serializer.validated_data.get("tax_total"),
-            payments=serializer.validated_data.get("payments") or [],
-            user=request.user,
-        )
-        return Response(
-            SaleInvoiceReceiptSerializer(invoice).data,
-            status=status.HTTP_201_CREATED,
-        )
+        if serializer.is_valid():
+            data = serializer.validated_data
+            company = request.user.profile.company
 
+            with transaction.atomic():
+                # Generate Invoice Number
+                last_invoice = SaleInvoice.objects.filter(company=company).aggregate(
+                    Max("sequence")
+                )["sequence__max"]
+                sequence = (last_invoice or 0) + 1
+                invoice_no = f"INV-{sequence:06d}"
 
-class SalePaymentView(APIView):
-    permission_classes = [SalePermission]
+                invoice = SaleInvoice.objects.create(
+                    company=company,
+                    branch=data["branch"],
+                    warehouse=data["warehouse"],
+                    invoice_no=invoice_no,
+                    invoice_date=date.today(),
+                    sequence=sequence,
+                    created_by=request.user,
+                    status=SaleInvoice.Status.DRAFT,
+                    kind=SaleInvoice.Kind.SALE,
+                )
+
+                subtotal = Decimal("0.00")
+                
+                for item in data["items"]:
+                    product = item["product"]
+                    qty = item["qty"]
+                    # Assuming product has a price field, defaulting to 0 if not found
+                    unit_price = getattr(product, "sales_price", Decimal("0.00"))
+                    line_total = unit_price * qty
+                    
+                    SaleItem.objects.create(
+                        invoice=invoice,
+                        product=product,
+                        qty=qty,
+                        unit_price=unit_price,
+                        line_total=line_total
+                    )
+                    subtotal += line_total
+
+                invoice.subtotal = subtotal
+                invoice.discount_total = data.get("discount_total", Decimal("0.00"))
+                invoice.tax_total = data.get("tax_total", Decimal("0.00"))
+                invoice.grand_total = (subtotal - invoice.discount_total) + invoice.tax_total
+                invoice.save()
+
+                # Process Payments
+                payments = data.get("payments")
+                if payments:
+                    total_paid = Decimal("0.00")
+                    for payment_data in payments:
+                        Payment.objects.create(
+                            invoice=invoice,
+                            method=payment_data["method"],
+                            amount=payment_data["amount"],
+                            reference=payment_data.get("reference"),
+                        )
+                        total_paid += payment_data["amount"]
+                    
+                    if total_paid >= invoice.grand_total:
+                        invoice.status = SaleInvoice.Status.PAID
+                    elif total_paid > 0:
+                        invoice.status = SaleInvoice.Status.PARTIAL
+                    invoice.save()
+
+            receipt_serializer = SaleInvoiceReceiptSerializer(invoice)
+            return Response(receipt_serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class SalePaymentView(views.APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, invoice_id):
-        serializer = PaymentCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        company = get_user_company(request.user)
-        invoice = (
-            SaleInvoice.objects.select_related("warehouse", "branch")
-            .filter(company=company, id=invoice_id)
-            .first()
-        )
-        if not invoice:
-            raise serializers.ValidationError("Invoice not found.")
-        if invoice.warehouse not in scoped_warehouses(request.user):
-            raise serializers.ValidationError("Warehouse not in your scope.")
-        invoice = add_payment(
-            company=company,
-            invoice=invoice,
-            payments=serializer.validated_data["payments"],
-            user=request.user,
-        )
-        return Response(SaleInvoiceReceiptSerializer(invoice).data, status=status.HTTP_200_OK)
+        invoice = get_object_or_404(SaleInvoice, id=invoice_id, company=request.user.profile.company)
+        serializer = PaymentInputSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            data = serializer.validated_data
+            with transaction.atomic():
+                Payment.objects.create(
+                    invoice=invoice,
+                    method=data["method"],
+                    amount=data["amount"],
+                    reference=data.get("reference"),
+                )
+                
+                # Recalculate status
+                total_paid = sum(p.amount for p in invoice.payments.all())
+                if total_paid >= invoice.grand_total:
+                    invoice.status = SaleInvoice.Status.PAID
+                elif total_paid > 0:
+                    invoice.status = SaleInvoice.Status.PARTIAL
+                invoice.save()
+                
+            return Response({"detail": "Payment added successfully."}, status=status.HTTP_201_CREATED)
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-class SaleReturnView(APIView):
-    permission_classes = [SaleReturnPermission]
+class SaleReturnView(views.APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, invoice_id):
+        original_invoice = get_object_or_404(SaleInvoice, id=invoice_id, company=request.user.profile.company)
         serializer = ReturnCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        company = get_user_company(request.user)
-        invoice = (
-            SaleInvoice.objects.select_related("warehouse", "branch")
-            .filter(company=company, id=invoice_id)
-            .first()
-        )
-        if not invoice:
-            raise serializers.ValidationError("Invoice not found.")
-        if invoice.warehouse not in scoped_warehouses(request.user):
-            raise serializers.ValidationError("Warehouse not in your scope.")
-        return_invoice = return_sale_invoice(
-            company=company,
-            invoice=invoice,
-            items=serializer.validated_data["items"],
-            user=request.user,
-        )
-        return Response(
-            SaleInvoiceReceiptSerializer(return_invoice).data,
-            status=status.HTTP_201_CREATED,
-        )
+        
+        if serializer.is_valid():
+            data = serializer.validated_data
+            company = request.user.profile.company
+            
+            with transaction.atomic():
+                # Generate Return Invoice No
+                last_invoice = SaleInvoice.objects.filter(company=company).aggregate(Max("sequence"))["sequence__max"]
+                sequence = (last_invoice or 0) + 1
+                invoice_no = f"RET-{sequence:06d}"
+                
+                return_invoice = SaleInvoice.objects.create(
+                    company=company,
+                    branch=original_invoice.branch,
+                    warehouse=original_invoice.warehouse,
+                    invoice_no=invoice_no,
+                    invoice_date=date.today(),
+                    sequence=sequence,
+                    created_by=request.user,
+                    status=SaleInvoice.Status.RETURNED,
+                    kind=SaleInvoice.Kind.RETURN,
+                    original_invoice=original_invoice
+                )
+                
+                subtotal = Decimal("0.00")
+                
+                for item in data["items"]:
+                    sale_item = item["sale_item"]
+                    qty = item["qty"]
+                    
+                    unit_price = sale_item.unit_price
+                    line_total = unit_price * qty
+                    
+                    SaleItem.objects.create(
+                        invoice=return_invoice,
+                        product=sale_item.product,
+                        batch=sale_item.batch,
+                        qty=qty,
+                        unit_price=unit_price,
+                        line_total=line_total
+                    )
+                    subtotal += line_total
+                
+                return_invoice.subtotal = subtotal
+                return_invoice.grand_total = subtotal
+                return_invoice.save()
+                
+            return Response({"detail": "Return processed.", "return_invoice_no": invoice_no}, status=status.HTTP_201_CREATED)
 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class SaleReceiptView(APIView):
-    permission_classes = [SalePermission]
+class SaleReceiptView(views.APIView):
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, invoice_id):
-        company = get_user_company(request.user)
-        invoice = (
-            SaleInvoice.objects.select_related("branch", "warehouse", "created_by")
-            .prefetch_related("items__product", "items__batch", "payments")
-            .filter(company=company, id=invoice_id)
-            .first()
-        )
-        if not invoice:
-            raise serializers.ValidationError("Invoice not found.")
-        if invoice.warehouse not in scoped_warehouses(request.user):
-            raise serializers.ValidationError("Warehouse not in your scope.")
-        return Response(SaleInvoiceReceiptSerializer(invoice).data, status=status.HTTP_200_OK)
+        invoice = get_object_or_404(SaleInvoice, id=invoice_id, company=request.user.profile.company)
+        serializer = SaleInvoiceReceiptSerializer(invoice)
+        return Response(serializer.data)

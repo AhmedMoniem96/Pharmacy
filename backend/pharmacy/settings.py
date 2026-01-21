@@ -115,6 +115,7 @@ REST_FRAMEWORK = {
         "anon": os.environ.get("THROTTLE_ANON_RATE", "30/min"),
         "user": os.environ.get("THROTTLE_USER_RATE", "300/min"),
         "auth_token": os.environ.get("THROTTLE_AUTH_RATE", "60/min"),
+        "register": "10/hour",
     },
 }
 

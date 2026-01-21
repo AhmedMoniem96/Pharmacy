@@ -1,87 +1,37 @@
 from rest_framework import viewsets
-
-from accounts.audit import log_audit_event
-from accounts.mixins import CompanyScopedModelViewSet
-from accounts.models import get_user_company, scoped_branches
-from accounts.permissions import IsAdminRoleOrReadOnly, IsSuperuser
-
-from .models import Branch, Category, Company, Manufacturer, Product, Warehouse
+from rest_framework.permissions import IsAuthenticated
+from .models import Company, Branch, Warehouse, Category, Manufacturer, Product
 from .serializers import (
-    BranchSerializer,
-    CategorySerializer,
-    CompanySerializer,
-    ManufacturerSerializer,
-    ProductSerializer,
-    WarehouseSerializer,
+    CompanySerializer, BranchSerializer, WarehouseSerializer,
+    CategorySerializer, ManufacturerSerializer, ProductSerializer
 )
-
 
 class CompanyViewSet(viewsets.ModelViewSet):
     queryset = Company.objects.all()
     serializer_class = CompanySerializer
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsAuthenticated]
 
-
-class BranchViewSet(CompanyScopedModelViewSet):
+class BranchViewSet(viewsets.ModelViewSet):
+    queryset = Branch.objects.all()
     serializer_class = BranchSerializer
-    permission_classes = [IsAdminRoleOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        company = get_user_company(self.request.user)
-        if not company:
-            return Branch.objects.none()
-        return self.filter_company_queryset(Branch.objects.all())
-
-
-class WarehouseViewSet(CompanyScopedModelViewSet):
+class WarehouseViewSet(viewsets.ModelViewSet):
+    queryset = Warehouse.objects.all()
     serializer_class = WarehouseSerializer
-    permission_classes = [IsAdminRoleOrReadOnly]
-    company_lookup = "branch__company"
-    company_create_field = None
+    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        branches = scoped_branches(self.request.user)
-        queryset = Warehouse.objects.filter(branch__in=branches)
-        return self.filter_company_queryset(queryset)
-
-
-class CategoryViewSet(CompanyScopedModelViewSet):
+class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAdminRoleOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
-
-class ManufacturerViewSet(CompanyScopedModelViewSet):
+class ManufacturerViewSet(viewsets.ModelViewSet):
     queryset = Manufacturer.objects.all()
     serializer_class = ManufacturerSerializer
-    permission_classes = [IsAdminRoleOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
-
-class ProductViewSet(CompanyScopedModelViewSet):
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAdminRoleOrReadOnly]
-
-    def get_queryset(self):
-        return self.filter_company_queryset(Product.objects.all())
-
-    def perform_create(self, serializer):
-        product = serializer.save(company=get_user_company(self.request.user))
-        log_audit_event(
-            company=product.company,
-            user=self.request.user,
-            action="CREATE",
-            entity_type="Product",
-            entity_id=product.id,
-            summary=f"Created product {product.sku}",
-        )
-
-    def perform_update(self, serializer):
-        product = serializer.save()
-        log_audit_event(
-            company=product.company,
-            user=self.request.user,
-            action="UPDATE",
-            entity_type="Product",
-            entity_id=product.id,
-            summary=f"Updated product {product.sku}",
-        )
+    permission_classes = [IsAuthenticated]

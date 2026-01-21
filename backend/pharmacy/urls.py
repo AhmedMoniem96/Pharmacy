@@ -4,7 +4,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from accounts.views import MeView, TokenObtainPairRateLimitedView
+from accounts.views import MeView, TokenObtainPairRateLimitedView, RegisterView
 from accounting.views import AccountViewSet, JournalEntryViewSet, JournalViewSet
 from inventory.views import (
     AdjustStockView,
@@ -66,6 +66,7 @@ urlpatterns = [
     # Auth (JWT)
     path("api/auth/token/", TokenObtainPairRateLimitedView.as_view(), name="token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/auth/register/", RegisterView.as_view(), name="auth-register"),
 
     # Accounts
     path("api/accounts/me/", MeView.as_view(), name="accounts-me"),

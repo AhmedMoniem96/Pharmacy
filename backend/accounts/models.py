@@ -1,71 +1,39 @@
-from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import models
+from masterdata.models import Company, Branch, Warehouse
 
-from masterdata.models import Branch, Company, Warehouse
-
+User = get_user_model()
 
 class UserProfile(models.Model):
-    class Role(models.TextChoices):
-        ADMIN = "ADMIN", "Admin"
-        MANAGER = "MANAGER", "Manager"
-        CASHIER = "CASHIER", "Cashier"
-        INVENTORY = "INVENTORY", "Inventory"
-        ACCOUNTANT = "ACCOUNTANT", "Accountant"
-
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
-    )
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="user_profiles")
-    role = models.CharField(max_length=20, choices=Role.choices)
-    allowed_branches = models.ManyToManyField(Branch, blank=True, related_name="allowed_users")
-    allowed_warehouses = models.ManyToManyField(
-        Warehouse, blank=True, related_name="allowed_users"
-    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    role = models.CharField(max_length=50, default="STAFF")
     can_sell_expired = models.BooleanField(default=False)
 
-    def __str__(self) -> str:
-        return f"{self.user.username} ({self.role})"
-
-
-class AuditLog(models.Model):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="audit_logs")
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
-    )
-    action = models.CharField(max_length=50)
-    entity_type = models.CharField(max_length=100)
-    entity_id = models.CharField(max_length=100, blank=True)
-    summary = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["company", "entity_type", "entity_id"]),
-            models.Index(fields=["company", "timestamp"]),
-        ]
-
-    def __str__(self) -> str:
-        return f"{self.action} {self.entity_type} {self.entity_id}"
-
-
-def get_user_company(user):
-    profile = getattr(user, "profile", None)
-    return profile.company if profile else None
-
+    def __str__(self):
+        return f"{self.user.username} - {self.company.name}"
 
 def scoped_branches(user):
-    profile = getattr(user, "profile", None)
-    if not profile:
-        return Branch.objects.none()
-    if profile.allowed_branches.exists():
-        return profile.allowed_branches.all()
-    return Branch.objects.filter(company=profile.company)
-
+    if hasattr(user, 'profile'):
+        return Branch.objects.filter(company=user.profile.company)
+    return Branch.objects.none()
 
 def scoped_warehouses(user):
-    profile = getattr(user, "profile", None)
-    if not profile:
-        return Warehouse.objects.none()
-    if profile.allowed_warehouses.exists():
-        return profile.allowed_warehouses.all()
-    return Warehouse.objects.filter(branch__company=profile.company)
+    if hasattr(user, 'profile'):
+        return Warehouse.objects.filter(branch__company=user.profile.company)
+    return Warehouse.objects.none()
+
+def get_user_company(user):
+    return user.profile.company if hasattr(user, 'profile') else None
+
+class AuditLog(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    action = models.CharField(max_length=50)
+    entity_type = models.CharField(max_length=100)
+    entity_id = models.CharField(max_length=100)
+    summary = models.TextField()
+
+    def __str__(self):
+        return f"{self.timestamp} - {self.action} - {self.entity_type}"

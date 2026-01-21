@@ -1,36 +1,41 @@
-from accounts.mixins import CompanyScopedReadOnlyModelViewSet
-from accounts.permissions import AccountingPermission
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
 
 from .models import Account, Journal, JournalEntry
-from .serializers import AccountSerializer, JournalEntrySerializer, JournalSerializer
+from .serializers import AccountSerializer, JournalSerializer, JournalEntrySerializer
 
 
-class AccountViewSet(CompanyScopedReadOnlyModelViewSet):
+class AccountViewSet(viewsets.ModelViewSet):
     serializer_class = AccountSerializer
-    permission_classes = [AccountingPermission]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Account.objects.filter(is_active=True).order_by("code")
-        return self.filter_company_queryset(queryset)
+        # Filter accounts by the logged-in user's company
+        return Account.objects.filter(company=self.request.user.profile.company)
+
+    def perform_create(self, serializer):
+        # Automatically assign the company
+        serializer.save(company=self.request.user.profile.company)
 
 
-class JournalViewSet(CompanyScopedReadOnlyModelViewSet):
+class JournalViewSet(viewsets.ModelViewSet):
     serializer_class = JournalSerializer
-    permission_classes = [AccountingPermission]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Journal.objects.all().order_by("code")
-        return self.filter_company_queryset(queryset)
+        return Journal.objects.filter(company=self.request.user.profile.company)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.profile.company)
 
 
-class JournalEntryViewSet(CompanyScopedReadOnlyModelViewSet):
+class JournalEntryViewSet(viewsets.ModelViewSet):
     serializer_class = JournalEntrySerializer
-    permission_classes = [AccountingPermission]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = (
-            JournalEntry.objects.select_related("journal", "created_by")
-            .prefetch_related("lines__account")
-            .order_by("-date", "-entry_no")
-        )
-        return self.filter_company_queryset(queryset)
+        return JournalEntry.objects.filter(company=self.request.user.profile.company)
+
+    def perform_create(self, serializer):
+        # Assign company and creator
+        serializer.save(company=self.request.user.profile.company, created_by=self.request.user)
