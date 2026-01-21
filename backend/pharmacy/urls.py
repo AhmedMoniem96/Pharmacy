@@ -22,6 +22,7 @@ from masterdata.views import (
     ProductViewSet,
     WarehouseViewSet,
 )
+from sales.views import SaleCreateView, SalePaymentView, SaleReceiptView, SaleReturnView
 
 
 def health_check(request):
@@ -56,6 +57,22 @@ urlpatterns = [
         "api/inventory/alerts/near-expiry/",
         NearExpiryAlertView.as_view(),
         name="inventory-near-expiry",
+    ),
+    path("api/sales/pos/sale/", SaleCreateView.as_view(), name="pos-sale-create"),
+    path(
+        "api/sales/pos/<int:invoice_id>/pay/",
+        SalePaymentView.as_view(),
+        name="pos-sale-pay",
+    ),
+    path(
+        "api/sales/pos/<int:invoice_id>/return/",
+        SaleReturnView.as_view(),
+        name="pos-sale-return",
+    ),
+    path(
+        "api/sales/pos/<int:invoice_id>/receipt/",
+        SaleReceiptView.as_view(),
+        name="pos-sale-receipt",
     ),
     path("api/", include(router.urls)),
 ]

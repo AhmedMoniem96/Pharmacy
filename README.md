@@ -72,18 +72,90 @@ Inventory:
 - `GET /api/inventory/alerts/low-stock/?warehouse=<warehouse_id>`
 - `GET /api/inventory/alerts/near-expiry/?warehouse=<warehouse_id>&days=30`
 
+POS / Sales (Step C):
+- `POST /api/sales/pos/sale/` — create sale invoice
+- `POST /api/sales/pos/<invoice_id>/pay/` — add payment to an invoice
+- `POST /api/sales/pos/<invoice_id>/return/` — return/void via compensating invoice
+- `GET /api/sales/pos/<invoice_id>/receipt/` — JSON receipt
+
 All endpoints are JWT protected except `/api/health/`.
 
 ## Role rules (current)
 
 - **ADMIN**: CRUD everything within their company.
-- **MANAGER**: read-only for now (future extensions in Step B).
-- **CASHIER**: read products/batches and warehouse scope; sales endpoints later.
+- **MANAGER**: POS returns/voids + read access.
+- **CASHIER**: create sales, add payments, view receipts.
 - **INVENTORY**: CRUD batches; stock ledger creation later.
 - **ACCOUNTANT**: read-only for now; accounting endpoints later.
 
 Access scoping:
 - `allowed_branches`/`allowed_warehouses` on `UserProfile` default to **all** in the company when empty.
+
+## POS workflow (Step C)
+
+- Invoice numbers are sequential per company and date (`YYYYMMDD-SEQ`).
+- Sales always call `inventory.sell_stock()` to enforce FEFO.
+- Expired batches are blocked unless `user.profile.can_sell_expired = true`.
+- Payments can be added later; invoices move from `DRAFT` → `PARTIAL` → `PAID`.
+- Returns create a compensating return invoice; original invoices are never deleted.
+
+### Sale payload example
+
+```json
+{
+  "branch_id": 1,
+  "warehouse_id": 1,
+  "items": [
+    {"product_id": 10, "qty": "2"},
+    {"product_id": 11, "qty": "1"}
+  ],
+  "discount_total": "5.00",
+  "payments": [
+    {"method": "CASH", "amount": "50.00"}
+  ]
+}
+```
+
+### Receipt JSON example
+
+```json
+{
+  "id": 101,
+  "invoice_no": "20260121-0001",
+  "invoice_date": "2026-01-21",
+  "status": "PAID",
+  "kind": "SALE",
+  "branch_id": 1,
+  "branch_name": "Main",
+  "warehouse_id": 1,
+  "warehouse_name": "Main Warehouse",
+  "created_by": "cashier",
+  "created_at": "2026-01-21T12:00:00Z",
+  "subtotal": "60.00",
+  "discount_total": "5.00",
+  "tax_total": "0.00",
+  "grand_total": "55.00",
+  "items": [
+    {
+      "product_id": 10,
+      "product_name": "Pain Reliever",
+      "sku": "DRUG-010",
+      "batch_no": "B-001",
+      "qty": "2.00",
+      "unit_price": "30.00",
+      "line_total": "60.00"
+    }
+  ],
+  "payments": [
+    {
+      "method": "CASH",
+      "amount": "55.00",
+      "reference": "",
+      "created_at": "2026-01-21T12:00:00Z"
+    }
+  ]
+}
+```
 
 ## Seed demo data (dev only)
 
