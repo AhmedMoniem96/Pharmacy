@@ -1,13 +1,12 @@
 import React from 'react';
-import { Typography, Box } from '@mui/material';
-import { useTranslation } from 'react-i18next';
 
 export default function Accounting() {
-  const { t } = useTranslation();
   return (
-    <Box>
-      <Typography variant="h4">{t('accounting')}</Typography>
-      <Typography>Accounting module coming soon...</Typography>
-    </Box>
+    <div>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Accounting</h2>
+      <div className="bg-white shadow sm:rounded-lg p-6">
+        <p className="text-gray-500">General Ledger and Reports.</p>
+      </div>
+    </div>
   );
 }

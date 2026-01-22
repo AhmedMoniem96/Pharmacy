@@ -8,15 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
-import { Controller, useForm } from 'react-hook-form';
+import { Plus, Pencil, Trash2, Search, CheckCircle } from 'lucide-react';
+import { useForm, Controller } from 'react-hook-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-type GoodsReceiptFormValues = {
-  supplier: string;
-  warehouse: string;
-  ref_po_id?: string;
-};
 
 export const GoodsReceipts: React.FC = () => {
   const { t } = useTranslation();
@@ -26,70 +20,43 @@ export const GoodsReceipts: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    control,
-    formState: { errors }
-  } = useForm<GoodsReceiptFormValues>({
-    defaultValues: {
-      supplier: '',
-      warehouse: '',
-      ref_po_id: ''
-    }
-  });
+  const { register, handleSubmit, reset, setValue, control } = useForm();
 
-  const { data: goodsReceipts, isLoading, isFetching } = useQuery({
+  const { data: goodsReceipts, isLoading } = useQuery({
     queryKey: ['goodsReceiptsList', search],
     queryFn: async () => {
       const res = await api.get(`/purchases/goods-receipts/?search=${search}`);
       return res.data.results || res.data;
     },
-    onError: () => {
-      toast({ variant: 'destructive', title: t('error'), description: 'Failed to load goods receipts' });
-    }
   });
 
-  const { data: suppliers, isLoading: suppliersLoading } = useQuery({
-    queryKey: ['goodsReceiptSuppliers'],
+  const { data: suppliers } = useQuery({
+    queryKey: ['suppliersList'],
     queryFn: async () => {
       const res = await api.get('/purchases/suppliers/');
       return res.data.results || res.data;
     },
-    onError: () => {
-      toast({ variant: 'destructive', title: t('error'), description: 'Failed to load suppliers' });
-    }
   });
 
-  const { data: warehouses, isLoading: warehousesLoading } = useQuery({
-    queryKey: ['goodsReceiptWarehouses'],
-    queryFn: async () => {
-      const res = await api.get('/masterdata/warehouses/');
-      return res.data.results || res.data;
-    },
-    onError: () => {
-      toast({ variant: 'destructive', title: t('error'), description: 'Failed to load warehouses' });
-    }
-  });
+  const warehouseId = localStorage.getItem('selectedWarehouse');
 
   const mutation = useMutation({
-    mutationFn: async (data: GoodsReceiptFormValues) => {
+    mutationFn: async (data: any) => {
+      const payload = { ...data, warehouse: warehouseId };
       if (editingId) {
-        return api.put(`/purchases/goods-receipts/${editingId}/`, data);
+        return api.put(`/purchases/goods-receipts/${editingId}/`, payload);
       }
-      return api.post('/purchases/goods-receipts/', data);
+      return api.post('/purchases/goods-receipts/', payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goodsReceiptsList'] });
       setIsModalOpen(false);
       reset();
       setEditingId(null);
-      toast({ title: t('success'), description: 'Goods Receipt saved' });
+      toast({ title: t('success'), description: t('grn_saved') });
     },
     onError: () => {
-      toast({ variant: 'destructive', title: t('error'), description: 'Failed to save Goods Receipt' });
+      toast({ variant: 'destructive', title: t('error'), description: t('grn_save_failed') });
     }
   });
 
@@ -97,10 +64,10 @@ export const GoodsReceipts: React.FC = () => {
     mutationFn: async (id: number) => api.delete(`/purchases/goods-receipts/${id}/`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goodsReceiptsList'] });
-      toast({ title: t('success'), description: 'Goods Receipt deleted' });
+      toast({ title: t('success'), description: t('grn_deleted') });
     },
     onError: () => {
-      toast({ variant: 'destructive', title: t('error'), description: 'Failed to delete Goods Receipt' });
+      toast({ variant: 'destructive', title: t('error'), description: t('grn_delete_failed') });
     }
   });
 
@@ -108,22 +75,25 @@ export const GoodsReceipts: React.FC = () => {
     mutationFn: async (id: number) => api.post(`/purchases/goods-receipts/${id}/post/`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goodsReceiptsList'] });
-      toast({ title: t('success'), description: 'Goods Receipt posted' });
+      toast({ title: t('success'), description: t('grn_posted') });
     },
     onError: () => {
-      toast({ variant: 'destructive', title: t('error'), description: 'Failed to post Goods Receipt' });
+      toast({ variant: 'destructive', title: t('error'), description: t('grn_post_failed') });
     }
   });
 
   const handleEdit = (grn: any) => {
     setEditingId(grn.id);
-    setValue('supplier', String(grn.supplier_id ?? grn.supplier ?? ''));
-    setValue('warehouse', String(grn.warehouse_id ?? grn.warehouse ?? ''));
+    setValue('supplier', String(grn.supplier));
     setValue('ref_po_id', grn.ref_po_id);
     setIsModalOpen(true);
   };
 
   const handleCreate = () => {
+    if (!warehouseId) {
+      toast({ variant: 'destructive', title: t('error'), description: t('select_warehouse') });
+      return;
+    }
     setEditingId(null);
     reset();
     setIsModalOpen(true);
@@ -132,8 +102,6 @@ export const GoodsReceipts: React.FC = () => {
   const onSubmit = (data: any) => {
     mutation.mutate(data);
   };
-
-  const receipts = goodsReceipts ?? [];
 
   return (
     <div className="space-y-4">
@@ -149,9 +117,6 @@ export const GoodsReceipts: React.FC = () => {
           value={search} 
           onChange={(e) => setSearch(e.target.value)} 
         />
-        {isFetching && !isLoading && (
-          <span className="text-xs text-muted-foreground">{t('loading')}</span>
-        )}
       </div>
 
       <div className="border rounded-md">
@@ -170,42 +135,27 @@ export const GoodsReceipts: React.FC = () => {
               <TableRow>
                 <TableCell colSpan={5} className="text-center">{t('loading')}</TableCell>
               </TableRow>
-            ) : receipts.length === 0 ? (
+            ) : goodsReceipts?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center">
-                  <div className="flex flex-col items-center gap-1 py-4 text-muted-foreground">
-                    <span>{t('no_data')}</span>
-                    <span className="text-xs">Try adjusting your search.</span>
-                  </div>
-                </TableCell>
+                <TableCell colSpan={5} className="text-center">{t('no_data')}</TableCell>
               </TableRow>
             ) : (
-              receipts.map((grn: any) => (
+              goodsReceipts?.map((grn: any) => (
                 <TableRow key={grn.id}>
-                  <TableCell className="font-medium">{grn.reference || grn.grn_no}</TableCell>
-                  <TableCell>{grn.supplier_name || grn.supplier || '—'}</TableCell>
-                  <TableCell>{grn.warehouse_name || grn.warehouse || '—'}</TableCell>
-                  <TableCell>{grn.status || '—'}</TableCell>
+                  <TableCell className="font-medium">{grn.grn_number}</TableCell>
+                  <TableCell>{grn.supplier_name || grn.supplier}</TableCell>
+                  <TableCell>{grn.warehouse_name || grn.warehouse}</TableCell>
+                  <TableCell>{grn.status}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mr-2"
-                      onClick={() => postMutation.mutate(grn.id)}
-                      disabled={postMutation.isPending || grn.status !== 'DRAFT'}
-                    >
-                      Post
-                    </Button>
+                    {grn.status === 'DRAFT' && (
+                      <Button variant="ghost" size="icon" onClick={() => postMutation.mutate(grn.id)} disabled={postMutation.isPending}>
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(grn)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      disabled={deleteMutation.isPending}
-                      onClick={() => deleteMutation.mutate(grn.id)}
-                    >
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteMutation.mutate(grn.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -229,70 +179,26 @@ export const GoodsReceipts: React.FC = () => {
                 name="supplier"
                 rules={{ required: true }}
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={suppliersLoading}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger>
                       <SelectValue placeholder={t('supplier')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {suppliers?.length ? (
-                        suppliers.map((supplier: any) => (
-                          <SelectItem key={supplier.id} value={String(supplier.id)}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>
-                          {suppliersLoading ? t('loading') : t('no_data')}
-                        </SelectItem>
-                      )}
+                      {suppliers?.map((s: any) => (
+                        <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-              {errors.supplier && (
-                <p className="text-sm text-destructive">This field is required.</p>
-              )}
             </div>
             <div className="space-y-2">
-              <Label>{t('warehouse')}</Label>
-              <Controller
-                control={control}
-                name="warehouse"
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={warehousesLoading}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('warehouse')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {warehouses?.length ? (
-                        warehouses.map((warehouse: any) => (
-                          <SelectItem key={warehouse.id} value={String(warehouse.id)}>
-                            {warehouse.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>
-                          {warehousesLoading ? t('loading') : t('no_data')}
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.warehouse && (
-                <p className="text-sm text-destructive">This field is required.</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>{t('purchase_order')}</Label>
+              <Label>{t('purchase_order')} ({t('optional')})</Label>
               <Input {...register('ref_po_id')} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>{t('cancel')}</Button>
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? t('loading') : t('save')}
-              </Button>
+              <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? t('loading') : t('save')}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/api/axios';
@@ -9,14 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-type PurchaseOrderFormValues = {
-  reference: string;
-  supplier: string;
-  status: string;
-};
 
 export const PurchaseOrders: React.FC = () => {
   const { t } = useTranslation();
@@ -26,55 +20,26 @@ export const PurchaseOrders: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    control,
-    formState: { errors }
-  } = useForm<PurchaseOrderFormValues>({
-    defaultValues: {
-      reference: '',
-      supplier: '',
-      status: ''
-    }
-  });
+  const { register, handleSubmit, reset, setValue, control } = useForm();
 
-  const statusOptions = useMemo(
-    () => [
-      { value: 'DRAFT', label: 'Draft' },
-      { value: 'SENT', label: 'Sent' },
-      { value: 'RECEIVED', label: 'Received' },
-      { value: 'CANCELED', label: 'Canceled' }
-    ],
-    []
-  );
-
-  const { data: purchaseOrders, isLoading, isFetching } = useQuery({
+  const { data: purchaseOrders, isLoading } = useQuery({
     queryKey: ['purchaseOrdersList', search],
     queryFn: async () => {
       const res = await api.get(`/purchases/purchase-orders/?search=${search}`);
       return res.data.results || res.data;
     },
-    onError: () => {
-      toast({ variant: 'destructive', title: t('error'), description: 'Failed to load purchase orders' });
-    }
   });
 
-  const { data: suppliers, isLoading: suppliersLoading } = useQuery({
-    queryKey: ['purchaseOrderSuppliers'],
+  const { data: suppliers } = useQuery({
+    queryKey: ['suppliersList'],
     queryFn: async () => {
       const res = await api.get('/purchases/suppliers/');
       return res.data.results || res.data;
     },
-    onError: () => {
-      toast({ variant: 'destructive', title: t('error'), description: 'Failed to load suppliers' });
-    }
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: PurchaseOrderFormValues) => {
+    mutationFn: async (data: any) => {
       if (editingId) {
         return api.put(`/purchases/purchase-orders/${editingId}/`, data);
       }
@@ -85,10 +50,10 @@ export const PurchaseOrders: React.FC = () => {
       setIsModalOpen(false);
       reset();
       setEditingId(null);
-      toast({ title: t('success'), description: 'Purchase Order saved' });
+      toast({ title: t('success'), description: t('po_saved') });
     },
     onError: () => {
-      toast({ variant: 'destructive', title: t('error'), description: 'Failed to save Purchase Order' });
+      toast({ variant: 'destructive', title: t('error'), description: t('po_save_failed') });
     }
   });
 
@@ -96,18 +61,17 @@ export const PurchaseOrders: React.FC = () => {
     mutationFn: async (id: number) => api.delete(`/purchases/purchase-orders/${id}/`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchaseOrdersList'] });
-      toast({ title: t('success'), description: 'Purchase Order deleted' });
+      toast({ title: t('success'), description: t('po_deleted') });
     },
     onError: () => {
-      toast({ variant: 'destructive', title: t('error'), description: 'Failed to delete Purchase Order' });
+      toast({ variant: 'destructive', title: t('error'), description: t('po_delete_failed') });
     }
   });
 
   const handleEdit = (po: any) => {
     setEditingId(po.id);
-    setValue('reference', po.reference || po.po_no || '');
-    setValue('supplier', String(po.supplier_id ?? po.supplier ?? ''));
-    setValue('status', po.status || '');
+    setValue('supplier', String(po.supplier));
+    setValue('status', po.status);
     setIsModalOpen(true);
   };
 
@@ -117,11 +81,9 @@ export const PurchaseOrders: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const onSubmit = (data: PurchaseOrderFormValues) => {
+  const onSubmit = (data: any) => {
     mutation.mutate(data);
   };
-
-  const orders = purchaseOrders ?? [];
 
   return (
     <div className="space-y-4">
@@ -137,9 +99,6 @@ export const PurchaseOrders: React.FC = () => {
           value={search} 
           onChange={(e) => setSearch(e.target.value)} 
         />
-        {isFetching && !isLoading && (
-          <span className="text-xs text-muted-foreground">{t('loading')}</span>
-        )}
       </div>
 
       <div className="border rounded-md">
@@ -157,32 +116,21 @@ export const PurchaseOrders: React.FC = () => {
               <TableRow>
                 <TableCell colSpan={4} className="text-center">{t('loading')}</TableCell>
               </TableRow>
-            ) : orders.length === 0 ? (
+            ) : purchaseOrders?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center">
-                  <div className="flex flex-col items-center gap-1 py-4 text-muted-foreground">
-                    <span>{t('no_data')}</span>
-                    <span className="text-xs">Try adjusting your search.</span>
-                  </div>
-                </TableCell>
+                <TableCell colSpan={4} className="text-center">{t('no_data')}</TableCell>
               </TableRow>
             ) : (
-              orders.map((po: any) => (
+              purchaseOrders?.map((po: any) => (
                 <TableRow key={po.id}>
-                  <TableCell className="font-medium">{po.reference || po.po_no}</TableCell>
-                  <TableCell>{po.supplier_name || po.supplier || '—'}</TableCell>
+                  <TableCell className="font-medium">{po.po_number}</TableCell>
+                  <TableCell>{po.supplier_name || po.supplier}</TableCell>
                   <TableCell>{po.status}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(po)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      disabled={deleteMutation.isPending}
-                      onClick={() => deleteMutation.mutate(po.id)}
-                    >
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteMutation.mutate(po.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -193,28 +141,12 @@ export const PurchaseOrders: React.FC = () => {
         </Table>
       </div>
 
-      <Dialog
-        open={isModalOpen}
-        onOpenChange={(open) => {
-          setIsModalOpen(open);
-          if (!open) {
-            reset();
-            setEditingId(null);
-          }
-        }}
-      >
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingId ? t('edit') : t('create')} {t('purchase_order')}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('reference')}</Label>
-              <Input {...register('reference', { required: true })} />
-              {errors.reference && (
-                <p className="text-sm text-destructive">This field is required.</p>
-              )}
-            </div>
             <div className="space-y-2">
               <Label>{t('supplier')}</Label>
               <Controller
@@ -222,46 +154,35 @@ export const PurchaseOrders: React.FC = () => {
                 name="supplier"
                 rules={{ required: true }}
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={suppliersLoading}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger>
                       <SelectValue placeholder={t('supplier')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {suppliers?.length ? (
-                        suppliers.map((supplier: any) => (
-                          <SelectItem key={supplier.id} value={String(supplier.id)}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>
-                          {suppliersLoading ? t('loading') : t('no_data')}
-                        </SelectItem>
-                      )}
+                      {suppliers?.map((s: any) => (
+                        <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-              {errors.supplier && (
-                <p className="text-sm text-destructive">This field is required.</p>
-              )}
             </div>
             <div className="space-y-2">
               <Label>{t('status')}</Label>
               <Controller
                 control={control}
                 name="status"
+                defaultValue="DRAFT"
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value || ''}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger>
                       <SelectValue placeholder={t('status')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {statusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="DRAFT">Draft</SelectItem>
+                      <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                      <SelectItem value="COMPLETED">Completed</SelectItem>
+                      <SelectItem value="CANCELLED">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -269,9 +190,7 @@ export const PurchaseOrders: React.FC = () => {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>{t('cancel')}</Button>
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? t('loading') : t('save')}
-              </Button>
+              <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? t('loading') : t('save')}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
