@@ -19,21 +19,22 @@ const actions: Array<{
   {
     label: "Create purchase order",
     icon: FilePlus,
-    shortcut: "⌘ + N",
+    shortcut: "⌘N",
   },
   {
     label: "Receive shipment",
     icon: Truck,
+    shortcut: "Alt+R",
   },
   {
     label: "Add new product",
     icon: PackagePlus,
-    shortcut: "⌘ + P",
+    shortcut: "⌘P",
   },
   {
     label: "Sync stock counts",
     icon: RefreshCcw,
-    shortcut: "⌘ + R",
+    shortcut: "⌘R",
   },
 ]
 
@@ -65,11 +66,9 @@ export const QuickActions: React.FC = () => {
                     <span className="text-sm font-semibold text-foreground">
                       {action.label}
                     </span>
-                    {action.shortcut ? (
-                      <span className="text-xs text-muted-foreground">
-                        {action.shortcut}
-                      </span>
-                    ) : null}
+                    <span className="rounded-md border border-border/60 bg-muted/70 px-2 py-0.5 text-xs font-mono text-muted-foreground">
+                      {action.shortcut}
+                    </span>
                   </span>
                 </Button>
               </CardContent>
