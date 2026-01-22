@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { useBranchWarehouse } from '@/context/BranchWarehouseContext';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -18,92 +19,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/components/ui/use-toast';
-
-interface Branch {
-  id: number;
-  name: string;
-}
-
-interface Warehouse {
-  id: number;
-  name: string;
-}
 
 export const Topbar: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
-  const { toast } = useToast();
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [selectedBranch, setSelectedBranch] = useState<string>(
-    localStorage.getItem('selectedBranch') || ''
-  );
-  const [selectedWarehouse, setSelectedWarehouse] = useState<string>(
-    localStorage.getItem('selectedWarehouse') || ''
-  );
-
-  useEffect(() => {
-    if (!user) return;
-
-    const allowedBranches = user.allowed_branches ?? [];
-    const allowedWarehouses = user.allowed_warehouses ?? [];
-
-    setBranches(allowedBranches);
-    setWarehouses(allowedWarehouses);
-
-    const nextBranch = (() => {
-      const isValid = allowedBranches.some((branch) => String(branch.id) === selectedBranch);
-      if (selectedBranch && !isValid) {
-        toast({
-          variant: 'destructive',
-          title: t('error'),
-          description: 'Selected branch is no longer available.',
-        });
-        return allowedBranches.length ? String(allowedBranches[0].id) : '';
-      }
-      if (!selectedBranch && allowedBranches.length) {
-        return String(allowedBranches[0].id);
-      }
-      return selectedBranch;
-    })();
-
-    const nextWarehouse = (() => {
-      const isValid = allowedWarehouses.some(
-        (warehouse) => String(warehouse.id) === selectedWarehouse
-      );
-      if (selectedWarehouse && !isValid) {
-        toast({
-          variant: 'destructive',
-          title: t('error'),
-          description: 'Selected warehouse is no longer available.',
-        });
-        return allowedWarehouses.length ? String(allowedWarehouses[0].id) : '';
-      }
-      if (!selectedWarehouse && allowedWarehouses.length) {
-        return String(allowedWarehouses[0].id);
-      }
-      return selectedWarehouse;
-    })();
-
-    setSelectedBranch(nextBranch);
-    setSelectedWarehouse(nextWarehouse);
-  }, [user, selectedBranch, selectedWarehouse, t, toast]);
-
-  useEffect(() => {
-    if (selectedBranch) {
-      localStorage.setItem('selectedBranch', selectedBranch);
-    } else {
-      localStorage.removeItem('selectedBranch');
-    }
-
-    if (selectedWarehouse) {
-      localStorage.setItem('selectedWarehouse', selectedWarehouse);
-    } else {
-      localStorage.removeItem('selectedWarehouse');
-    }
-  }, [selectedBranch, selectedWarehouse]);
+  const { branches, warehouses, selectedBranch, selectedWarehouse, setSelectedBranch, setSelectedWarehouse } =
+    useBranchWarehouse();
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'en' ? 'ar' : 'en';
@@ -165,7 +87,7 @@ export const Topbar: React.FC = () => {
           />
           <Moon className="h-4 w-4 text-muted-foreground" />
         </div>
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="space-x-2 rtl:space-x-reverse">
