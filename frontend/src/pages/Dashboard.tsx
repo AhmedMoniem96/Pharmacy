@@ -1,10 +1,38 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Clock, ShoppingCart, Package, Truck } from 'lucide-react';
+import {
+  Activity,
+  AlertTriangle,
+  CreditCard,
+  DollarSign,
+  ShoppingBag,
+  TrendingUp,
+  ShoppingCart,
+  Package,
+  Truck,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import api from '@/api/axios';
+
+const overviewData = [
+  { name: 'Mon', total: 1200 },
+  { name: 'Tue', total: 1800 },
+  { name: 'Wed', total: 2200 },
+  { name: 'Thu', total: 1600 },
+  { name: 'Fri', total: 2800 },
+  { name: 'Sat', total: 1900 },
+  { name: 'Sun', total: 2400 },
+];
+
+const recentSales = [
+  { name: 'Ahmed Moniem', email: 'ahmed@example.com', amount: '+$1,999.00' },
+  { name: 'Sarah Smith', email: 'sarah@example.com', amount: '+$39.00' },
+  { name: 'John Doe', email: 'john@example.com', amount: '+$299.00' },
+  { name: 'Isabella Nguyen', email: 'isabella@example.com', amount: '+$99.00' },
+];
 
 export const Dashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -30,114 +58,198 @@ export const Dashboard: React.FC = () => {
   });
 
   const shortcuts = [
-    { label: t('new_sale'), icon: ShoppingCart, to: '/pos', color: 'from-sky-500/20 to-blue-500/10' },
-    { label: t('add_product'), icon: Package, to: '/products', color: 'from-emerald-500/20 to-green-500/10' },
-    { label: t('receive_stock'), icon: Truck, to: '/purchasing', color: 'from-amber-500/20 to-orange-500/10' },
-  ];
-
-  const statusChips = [
-    { label: 'Live operations', tone: 'border-emerald-400/30 bg-emerald-400/10 text-emerald-50' },
-    { label: 'Inventory secure', tone: 'border-sky-300/30 bg-sky-400/10 text-sky-50' },
-    { label: 'Compliance synced', tone: 'border-amber-300/30 bg-amber-400/10 text-amber-50' },
+    { label: t('new_sale'), icon: ShoppingCart, to: '/pos', color: 'bg-sky-500/10 text-sky-500' },
+    { label: t('add_product'), icon: Package, to: '/products', color: 'bg-emerald-500/10 text-emerald-500' },
+    { label: t('receive_stock'), icon: Truck, to: '/purchasing', color: 'bg-amber-500/10 text-amber-500' },
   ];
 
   return (
-    <div className="space-y-8">
-      <Card className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-2xl">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-400/20 blur-3xl" />
-          <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl" />
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">{t('welcome')}</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t('dashboard')}</h1>
         </div>
-        <CardContent className="relative z-10 flex flex-col gap-4 p-8">
-          <p className="text-sm uppercase tracking-[0.35em] text-white/60">{t('welcome')}</p>
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold tracking-tight">{t('dashboard')}</h1>
-            <p className="max-w-2xl text-white/70">
-              Curate your daily focus with elegant insights, real-time safeguards, and quick actions
-              crafted for premium pharmacy operations.
-            </p>
+        <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Branch</label>
+            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm">
+              <option>All branches</option>
+              <option>Main branch</option>
+              <option>Community clinic</option>
+            </select>
           </div>
-          <div className="flex flex-wrap gap-3">
-            {statusChips.map((chip) => (
-              <span
-                key={chip.label}
-                className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide ${chip.tone}`}
-              >
-                {chip.label}
-              </span>
-            ))}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Warehouse</label>
+            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm">
+              <option>All warehouses</option>
+              <option>Central storage</option>
+              <option>North hub</option>
+            </select>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        <Card className="border border-white/10 bg-white/60 shadow-lg backdrop-blur dark:bg-slate-900/60">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('low_stock')}</CardTitle>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/10 text-destructive">
-              <AlertTriangle className="h-4 w-4" />
-            </span>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-3xl font-semibold">
-              {isLowStockLoading ? '...' : lowStockData?.length ?? 0}
-            </div>
-            <p className="text-sm text-muted-foreground">Critical stock items to review today.</p>
+          <CardContent>
+            <div className="text-2xl font-bold">$45,231.89</div>
+            <p className="mt-1 flex items-center text-xs text-emerald-500">
+              <TrendingUp className="mr-1 h-3 w-3" /> +20.1% from last month
+            </p>
           </CardContent>
         </Card>
-
-        <Card className="border border-white/10 bg-white/60 shadow-lg backdrop-blur dark:bg-slate-900/60">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('near_expiry')}</CardTitle>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400/15 text-amber-500">
-              <Clock className="h-4 w-4" />
-            </span>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Orders</CardTitle>
+            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-3xl font-semibold">
-              {isNearExpiryLoading ? '...' : nearExpiryData?.length ?? 0}
-            </div>
-            <p className="text-sm text-muted-foreground">Items nearing expiry in the next 30 days.</p>
+          <CardContent>
+            <div className="text-2xl font-bold">+2350</div>
+            <p className="mt-1 flex items-center text-xs text-emerald-500">
+              <TrendingUp className="mr-1 h-3 w-3" /> +180.1% from last month
+            </p>
           </CardContent>
         </Card>
-
-        <Card className="border border-white/10 bg-gradient-to-br from-amber-500/10 via-transparent to-indigo-500/10 shadow-lg backdrop-blur">
-          <CardHeader className="space-y-1 pb-2">
-            <CardTitle className="text-sm font-medium">Luxury overview</CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Sales</CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Tailor every shift with curated insights, plush visuals, and streamlined access to your
-              most-used tools.
+          <CardContent>
+            <div className="text-2xl font-bold">+12,234</div>
+            <p className="mt-1 flex items-center text-xs text-emerald-500">
+              <TrendingUp className="mr-1 h-3 w-3" /> +19% from last month
             </p>
-            <div className="flex items-center gap-2 text-sm font-medium text-amber-500">
-              <span className="h-2 w-2 rounded-full bg-amber-400" />
-              Premium-ready workflows
-            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Now</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">+573</div>
+            <p className="mt-1 text-xs text-muted-foreground">+201 since last hour</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-3">
-        {shortcuts.map((item) => (
-          <Card
-            key={item.to}
-            className="group cursor-pointer overflow-hidden border border-white/10 bg-white/70 shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl dark:bg-slate-900/60"
-            onClick={() => navigate(item.to)}
-          >
-            <CardContent className="relative flex flex-col items-center justify-center gap-4 p-6">
-              <div
-                className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-0 transition-opacity group-hover:opacity-100`}
-              />
-              <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-white/80 text-slate-900 shadow-md">
-                <item.icon className="h-7 w-7" />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={overviewData}>
+                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `$${value}`}
+                />
+                <Tooltip
+                  cursor={{ fill: 'transparent' }}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+                <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Sales</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {recentSales.map((sale) => (
+                  <div key={sale.email} className="flex items-center">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
+                      <span className="text-sm font-semibold">{sale.name[0]}</span>
+                    </div>
+                    <div className="ml-4 space-y-1">
+                      <p className="text-sm font-medium leading-none text-foreground">{sale.name}</p>
+                      <p className="text-sm text-muted-foreground">{sale.email}</p>
+                    </div>
+                    <div className="ml-auto text-sm font-medium text-foreground">{sale.amount}</div>
+                  </div>
+                ))}
               </div>
-              <h3 className="relative text-base font-semibold">{item.label}</h3>
-              <p className="relative text-xs text-muted-foreground">Tap to begin instantly.</p>
             </CardContent>
           </Card>
-        ))}
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                Low Stock Alerts
+              </CardTitle>
+              <span className="text-xs text-muted-foreground">
+                {isNearExpiryLoading ? '...' : nearExpiryData?.length ?? 0} near expiry
+              </span>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {isLowStockLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading low stock alerts...</p>
+                ) : lowStockData?.length ? (
+                  lowStockData.slice(0, 4).map((item: { id?: number; name?: string; stock?: number; min?: number }) => (
+                    <div
+                      key={item.id ?? item.name}
+                      className="flex items-center justify-between border-b border-border/60 pb-2 last:border-0"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{item.name ?? 'Unnamed item'}</p>
+                        <p className="text-xs text-destructive">
+                          Only {item.stock ?? 0} left (Min: {item.min ?? '--'})
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive">
+                        Restock
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No low stock alerts available.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {shortcuts.map((item) => (
+            <button
+              key={item.to}
+              className="flex items-center gap-4 rounded-lg border border-border/60 bg-background p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md"
+              onClick={() => navigate(item.to)}
+            >
+              <span className={`flex h-11 w-11 items-center justify-center rounded-full ${item.color}`}>
+                <item.icon className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                <p className="text-xs text-muted-foreground">Tap to begin instantly.</p>
+              </div>
+            </button>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 };
