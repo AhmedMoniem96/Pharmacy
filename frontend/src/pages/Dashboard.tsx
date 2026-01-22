@@ -7,7 +7,6 @@ import {
   CreditCard,
   DollarSign,
   ShoppingBag,
-  TrendingUp,
   ShoppingCart,
   Package,
   Truck,
@@ -17,6 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import api from '@/api/axios';
 import { DashboardHeader } from './dashboard/DashboardHeader';
+import { KpiCard } from './dashboard/KpiCard';
 
 const overviewData = [
   { name: 'Mon', total: 1200 },
@@ -69,52 +69,38 @@ export const Dashboard: React.FC = () => {
       <DashboardHeader />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$45,231.89</div>
-            <p className="mt-1 flex items-center text-xs text-emerald-500">
-              <TrendingUp className="mr-1 h-3 w-3" /> +20.1% from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Orders</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+2350</div>
-            <p className="mt-1 flex items-center text-xs text-emerald-500">
-              <TrendingUp className="mr-1 h-3 w-3" /> +180.1% from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Sales</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+12,234</div>
-            <p className="mt-1 flex items-center text-xs text-emerald-500">
-              <TrendingUp className="mr-1 h-3 w-3" /> +19% from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Now</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+573</div>
-            <p className="mt-1 text-xs text-muted-foreground">+201 since last hour</p>
-          </CardContent>
-        </Card>
+        <KpiCard
+          title="Total Revenue"
+          value="$45,231.89"
+          change="+20.1%"
+          trend="up"
+          icon={DollarSign}
+          helperText="from last month"
+        />
+        <KpiCard
+          title="Active Orders"
+          value="+2350"
+          change="+180.1%"
+          trend="up"
+          icon={ShoppingBag}
+          helperText="from last month"
+        />
+        <KpiCard
+          title="Sales"
+          value="+12,234"
+          change="+19%"
+          trend="up"
+          icon={CreditCard}
+          helperText="from last month"
+        />
+        <KpiCard
+          title="Active Now"
+          value="+573"
+          change="+201"
+          trend="up"
+          icon={Activity}
+          helperText="since last hour"
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
