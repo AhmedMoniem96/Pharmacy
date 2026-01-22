@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import api from '@/api/axios';
+import { DashboardHeader } from './dashboard/DashboardHeader';
 
 const overviewData = [
   { name: 'Mon', total: 1200 },
@@ -65,30 +66,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">{t('welcome')}</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t('dashboard')}</h1>
-        </div>
-        <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Branch</label>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm">
-              <option>All branches</option>
-              <option>Main branch</option>
-              <option>Community clinic</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Warehouse</label>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm">
-              <option>All warehouses</option>
-              <option>Central storage</option>
-              <option>North hub</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
