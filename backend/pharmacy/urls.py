@@ -4,7 +4,13 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from accounts.views import MeView, TokenObtainPairRateLimitedView, RegisterView
+from accounts.views import (
+    InviteTeammateView,
+    MeView,
+    ProfileUpdateView,
+    RegisterView,
+    TokenObtainPairRateLimitedView,
+)
 from accounting.views import AccountViewSet, JournalEntryViewSet, JournalViewSet
 from inventory.views import (
     AdjustStockView,
@@ -70,6 +76,8 @@ urlpatterns = [
 
     # Accounts
     path("api/accounts/me/", MeView.as_view(), name="accounts-me"),
+    path("api/accounts/profile/", ProfileUpdateView.as_view(), name="accounts-profile"),
+    path("api/accounts/invitations/", InviteTeammateView.as_view(), name="accounts-invite"),
 
     # Inventory actions
     path("api/inventory/receive/", ReceiveStockView.as_view(), name="inventory-receive"),

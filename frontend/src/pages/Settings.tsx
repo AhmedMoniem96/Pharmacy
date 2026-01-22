@@ -1,12 +1,107 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { BellRing, ShieldCheck, SlidersHorizontal, UserCircle2 } from 'lucide-react';
+import api from '@/api/axios';
+import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 export const Settings: React.FC = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isIntegrationsOpen, setIsIntegrationsOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    fullName: '',
+    role: '',
+    email: '',
+    timezone: '',
+  });
+  const [inviteForm, setInviteForm] = useState({
+    fullName: '',
+    email: '',
+    role: 'STAFF',
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    const profileUser = (user as any)?.user ?? user;
+    setProfileForm({
+      fullName: profileUser?.full_name || profileUser?.username || '',
+      role: (user as any)?.role || '',
+      email: profileUser?.email || '',
+      timezone: (user as any)?.timezone || '',
+    });
+  }, [user]);
+
+  const handleProfileChange = (field: keyof typeof profileForm, value: string) => {
+    setProfileForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleInviteChange = (field: keyof typeof inviteForm, value: string) => {
+    setInviteForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+    try {
+      await api.put('/accounts/profile/', {
+        full_name: profileForm.fullName,
+        role: profileForm.role,
+        email: profileForm.email,
+        timezone: profileForm.timezone,
+      });
+      toast({ title: 'Profile updated', description: 'Your profile settings were saved.' });
+    } catch (error) {
+      console.error('[Settings] Failed to save profile:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Update failed',
+        description: 'We could not save your profile settings.',
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleInviteTeammate = async () => {
+    setIsInviting(true);
+    try {
+      await api.post('/accounts/invitations/', {
+        full_name: inviteForm.fullName,
+        email: inviteForm.email,
+        role: inviteForm.role,
+      });
+      toast({ title: 'Invitation sent', description: 'Your teammate will receive an invite.' });
+      setInviteForm({ fullName: '', email: '', role: 'STAFF' });
+      setIsInviteDialogOpen(false);
+    } catch (error) {
+      console.error('[Settings] Failed to invite teammate:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Invitation failed',
+        description: 'We could not send the invitation.',
+      });
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <Card className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-indigo-950 via-slate-900 to-slate-950 text-white shadow-2xl">
@@ -51,23 +146,56 @@ export const Settings: React.FC = () => {
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="settings-name">Full name</Label>
-              <Input id="settings-name" placeholder="Marina Lee" />
+              <Input
+                id="settings-name"
+                placeholder="Marina Lee"
+                value={profileForm.fullName}
+                onChange={(event) => handleProfileChange('fullName', event.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="settings-role">Role</Label>
-              <Input id="settings-role" placeholder="Operations lead" />
+              <Input
+                id="settings-role"
+                placeholder="Operations lead"
+                value={profileForm.role}
+                onChange={(event) => handleProfileChange('role', event.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="settings-email">Email address</Label>
-              <Input id="settings-email" type="email" placeholder="marina@pharmacy.io" />
+              <Input
+                id="settings-email"
+                type="email"
+                placeholder="marina@pharmacy.io"
+                value={profileForm.email}
+                onChange={(event) => handleProfileChange('email', event.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="settings-timezone">Timezone</Label>
-              <Input id="settings-timezone" placeholder="UTC +02:00" />
+              <Input
+                id="settings-timezone"
+                placeholder="UTC +02:00"
+                value={profileForm.timezone}
+                onChange={(event) => handleProfileChange('timezone', event.target.value)}
+              />
             </div>
             <div className="md:col-span-2 flex flex-wrap gap-3">
-              <Button className="bg-slate-900 text-white hover:bg-slate-800">Save profile</Button>
-              <Button variant="outline">Invite teammate</Button>
+              <Button
+                className="bg-slate-900 text-white hover:bg-slate-800"
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile}
+              >
+                {isSavingProfile ? 'Saving...' : 'Save profile'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsInviteDialogOpen(true)}
+                disabled={isInviting}
+              >
+                Invite teammate
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -93,7 +221,12 @@ export const Settings: React.FC = () => {
                 <span className="font-semibold text-emerald-300">Low</span>
               </div>
             </div>
-            <Button className="w-full bg-white text-slate-900 hover:bg-white/90">Review policies</Button>
+            <Button
+              className="w-full bg-white text-slate-900 hover:bg-white/90"
+              onClick={() => navigate('/reports')}
+            >
+              Review policies
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -146,12 +279,90 @@ export const Settings: React.FC = () => {
                 Connect more integrations to unlock automation rules and premium monitoring.
               </p>
             </div>
-            <Button variant="outline" className="border-slate-200 bg-white">
+            <Button
+              variant="outline"
+              className="border-slate-200 bg-white"
+              onClick={() => setIsIntegrationsOpen(true)}
+            >
               Explore integrations
             </Button>
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite a teammate</DialogTitle>
+            <DialogDescription>
+              Send an invitation to join your pharmacy workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="invite-name">Full name</Label>
+              <Input
+                id="invite-name"
+                placeholder="Jordan Patel"
+                value={inviteForm.fullName}
+                onChange={(event) => handleInviteChange('fullName', event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Email address</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="jordan@pharmacy.io"
+                value={inviteForm.email}
+                onChange={(event) => handleInviteChange('email', event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-role">Role</Label>
+              <Input
+                id="invite-role"
+                placeholder="Staff"
+                value={inviteForm.role}
+                onChange={(event) => handleInviteChange('role', event.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsInviteDialogOpen(false)}
+              disabled={isInviting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleInviteTeammate} disabled={isInviting || !inviteForm.email}>
+              {isInviting ? 'Sending...' : 'Send invite'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isIntegrationsOpen} onOpenChange={setIsIntegrationsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Explore integrations</DialogTitle>
+            <DialogDescription>
+              Connect automation partners to streamline audit-ready workflows.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              Integrations for compliance monitoring, procurement, and clinical messaging are
+              arriving soon.
+            </p>
+            <p>Reach out to your account manager to join the early access list.</p>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsIntegrationsOpen(false)}>Got it</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
