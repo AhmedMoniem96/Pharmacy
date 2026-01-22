@@ -141,9 +141,23 @@ export const LowStockAlerts: React.FC<LowStockAlertsProps> = ({
             )
           })
         ) : (
-          <p className="text-sm text-muted-foreground">
-            No low stock alerts available.
-          </p>
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/60 bg-muted/30 px-6 py-8 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <PackageSearch className="h-5 w-5" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                Stock levels look healthy
+              </p>
+              <p className="text-xs text-muted-foreground">
+                You’ll see alerts here when items approach their reorder
+                thresholds.
+              </p>
+            </div>
+            <Button asChild size="sm" variant="secondary">
+              <Link to={viewAllHref}>Review inventory</Link>
+            </Button>
+          </div>
         )}
       </div>
     </SectionCard>
