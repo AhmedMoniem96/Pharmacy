@@ -34,9 +34,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const { data } = await api.get('/accounts/me/');
           console.log('[AuthContext] User profile fetched successfully:', data);
           setUser(data);
-        } catch (error) {
-          console.error('[AuthContext] Failed to fetch user profile:', error);
-          logout();
+        } catch (error: any) {
+          if (error?.response?.status === 404) {
+            console.warn('[AuthContext] User profile missing; proceeding without profile.');
+            setUser(null);
+          } else {
+            console.error('[AuthContext] Failed to fetch user profile:', error);
+            logout();
+          }
         }
       } else {
         console.log('[AuthContext] No token found.');
