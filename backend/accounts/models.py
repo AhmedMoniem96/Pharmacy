@@ -9,6 +9,7 @@ class UserProfile(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     role = models.CharField(max_length=50, default="STAFF")
     can_sell_expired = models.BooleanField(default=False)
+    timezone = models.CharField(max_length=64, blank=True, default="")
 
     def __str__(self):
         return f"{self.user.username} - {self.company.name}"

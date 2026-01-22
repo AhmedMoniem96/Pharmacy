@@ -36,6 +36,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = (
             "user",
             "role",
+            "timezone",
             "company",
             "allowed_branches",
             "allowed_warehouses",
@@ -43,7 +44,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
         )
 
     def get_user(self, obj):
-        return {"id": obj.user_id, "username": obj.user.username, "email": obj.user.email}
+        return {
+            "id": obj.user_id,
+            "username": obj.user.username,
+            "email": obj.user.email,
+            "full_name": obj.user.first_name or "",
+        }
 
     def get_allowed_branches(self, obj):
         branches = scoped_branches(obj.user)
@@ -81,3 +87,30 @@ class RegisterSerializer(serializers.ModelSerializer):
         UserProfile.objects.create(user=user, company=company, role='ADMIN')
             
         return user
+
+
+class UserProfileUpdateSerializer(serializers.Serializer):
+    full_name = serializers.CharField(required=False, allow_blank=True)
+    email = serializers.EmailField(required=False)
+    role = serializers.CharField(required=False, allow_blank=True)
+    timezone = serializers.CharField(required=False, allow_blank=True)
+
+    def update(self, instance, validated_data):
+        user = instance.user
+        if "full_name" in validated_data:
+            user.first_name = validated_data["full_name"]
+        if "email" in validated_data:
+            user.email = validated_data["email"]
+        if "role" in validated_data:
+            instance.role = validated_data["role"]
+        if "timezone" in validated_data:
+            instance.timezone = validated_data["timezone"]
+        user.save()
+        instance.save()
+        return instance
+
+
+class InviteTeammateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    full_name = serializers.CharField(required=False, allow_blank=True)
+    role = serializers.CharField(required=False, allow_blank=True, default="STAFF")
