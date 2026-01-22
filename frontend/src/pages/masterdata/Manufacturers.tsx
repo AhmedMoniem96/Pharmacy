@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/api/axios';
@@ -40,21 +40,24 @@ export const Manufacturers: React.FC = () => {
   });
 
   const {
-    data: manufacturers,
+    data: manufacturers = [],
     isLoading,
     isError
-  } = useQuery({
+  } = useQuery<Manufacturer[]>({
     queryKey: ['manufacturersList', search],
     queryFn: async () => {
       const res = await api.get('/masterdata/manufacturers/', {
         params: { search }
       });
       return res.data.results || res.data;
-    },
-    onError: () => {
-      toast({ variant: 'destructive', title: t('error'), description: t('manufacturer_load_failed') });
     }
   });
+
+  useEffect(() => {
+    if (isError) {
+      toast({ variant: 'destructive', title: t('error'), description: t('manufacturer_load_failed') });
+    }
+  }, [isError, t, toast]);
 
   const mutation = useMutation({
     mutationFn: async (data: ManufacturerFormValues) => {
@@ -139,12 +142,12 @@ export const Manufacturers: React.FC = () => {
                   {t('manufacturer_load_failed')}
                 </TableCell>
               </TableRow>
-            ) : manufacturers?.length === 0 ? (
+            ) : manufacturers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={2} className="text-center">{t('no_data')}</TableCell>
               </TableRow>
             ) : (
-              manufacturers?.map((manufacturer: Manufacturer) => (
+              manufacturers.map((manufacturer: Manufacturer) => (
                 <TableRow key={manufacturer.id}>
                   <TableCell className="font-medium">{manufacturer.name}</TableCell>
                   <TableCell className="text-right">
