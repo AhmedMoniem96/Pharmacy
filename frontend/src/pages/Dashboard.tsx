@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Activity,
   AlertTriangle,
@@ -63,6 +64,9 @@ export const Dashboard: React.FC = () => {
     { label: t('add_product'), icon: Package, to: '/products', color: 'bg-emerald-500/10 text-emerald-500' },
     { label: t('receive_stock'), icon: Truck, to: '/purchasing', color: 'bg-amber-500/10 text-amber-500' },
   ];
+  const isDashboardLoading = isLowStockLoading || isNearExpiryLoading;
+  const recentSalesSkeletons = Array.from({ length: 4 });
+  const lowStockSkeletons = Array.from({ length: 3 });
 
   return (
     <div className="space-y-6">
@@ -76,6 +80,7 @@ export const Dashboard: React.FC = () => {
           trend="up"
           icon={DollarSign}
           helperText="from last month"
+          isLoading={isDashboardLoading}
         />
         <KpiCard
           title="Active Orders"
@@ -84,6 +89,7 @@ export const Dashboard: React.FC = () => {
           trend="up"
           icon={ShoppingBag}
           helperText="from last month"
+          isLoading={isDashboardLoading}
         />
         <KpiCard
           title="Sales"
@@ -92,6 +98,7 @@ export const Dashboard: React.FC = () => {
           trend="up"
           icon={CreditCard}
           helperText="from last month"
+          isLoading={isDashboardLoading}
         />
         <KpiCard
           title="Active Now"
@@ -100,6 +107,7 @@ export const Dashboard: React.FC = () => {
           trend="up"
           icon={Activity}
           helperText="since last hour"
+          isLoading={isDashboardLoading}
         />
       </div>
 
@@ -109,23 +117,31 @@ export const Dashboard: React.FC = () => {
             <CardTitle>Overview</CardTitle>
           </CardHeader>
           <CardContent className="pl-2">
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={overviewData}>
-                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `$${value}`}
-                />
-                <Tooltip
-                  cursor={{ fill: 'transparent' }}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {isDashboardLoading ? (
+              <Skeleton className="h-[320px] w-full" />
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={overviewData}>
+                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `$${value}`}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'transparent' }}
+                    contentStyle={{
+                      borderRadius: '8px',
+                      border: 'none',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                    }}
+                  />
+                  <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -136,18 +152,29 @@ export const Dashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {recentSales.map((sale) => (
-                  <div key={sale.email} className="flex items-center">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
-                      <span className="text-sm font-semibold">{sale.name[0]}</span>
-                    </div>
-                    <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none text-foreground">{sale.name}</p>
-                      <p className="text-sm text-muted-foreground">{sale.email}</p>
-                    </div>
-                    <div className="ml-auto text-sm font-medium text-foreground">{sale.amount}</div>
-                  </div>
-                ))}
+                {isDashboardLoading
+                  ? recentSalesSkeletons.map((_, index) => (
+                      <div key={`recent-sales-skeleton-${index}`} className="flex items-center gap-4">
+                        <Skeleton className="h-9 w-9 rounded-full" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-3 w-40" />
+                        </div>
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                    ))
+                  : recentSales.map((sale) => (
+                      <div key={sale.email} className="flex items-center">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
+                          <span className="text-sm font-semibold">{sale.name[0]}</span>
+                        </div>
+                        <div className="ml-4 space-y-1">
+                          <p className="text-sm font-medium leading-none text-foreground">{sale.name}</p>
+                          <p className="text-sm text-muted-foreground">{sale.email}</p>
+                        </div>
+                        <div className="ml-auto text-sm font-medium text-foreground">{sale.amount}</div>
+                      </div>
+                    ))}
               </div>
             </CardContent>
           </Card>
@@ -165,7 +192,12 @@ export const Dashboard: React.FC = () => {
             <CardContent>
               <div className="space-y-4">
                 {isLowStockLoading ? (
-                  <p className="text-sm text-muted-foreground">Loading low stock alerts...</p>
+                  lowStockSkeletons.map((_, index) => (
+                    <div key={`low-stock-skeleton-${index}`} className="space-y-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-3 w-28" />
+                    </div>
+                  ))
                 ) : lowStockData?.length ? (
                   lowStockData.slice(0, 4).map((item: { id?: number; name?: string; stock?: number; min?: number }) => (
                     <div
