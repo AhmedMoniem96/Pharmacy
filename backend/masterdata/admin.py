@@ -20,18 +20,17 @@ class WarehouseAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'company')
-    list_filter = ('company',)
+    list_display = ("name", "parent")
+    list_filter = ("parent",)
     search_fields = ('name',)
 
 @admin.register(Manufacturer)
 class ManufacturerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'company')
-    list_filter = ('company',)
+    list_display = ("name",)
     search_fields = ('name',)
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'sku', 'company', 'category', 'sales_price')
-    list_filter = ('company', 'category')
-    search_fields = ('name', 'sku')
+    list_display = ("name", "sku", "company", "category", "type", "reorder_level")
+    list_filter = ("company", "category", "type")
+    search_fields = ("name", "sku", "barcode")
