@@ -2,22 +2,15 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Activity,
-  AlertTriangle,
-  CreditCard,
-  DollarSign,
-  ShoppingBag,
-  ShoppingCart,
-  Package,
-  Truck,
-} from 'lucide-react';
+import { Activity, CreditCard, DollarSign, ShoppingBag, ShoppingCart, Package, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import api from '@/api/axios';
 import { DashboardHeader } from './dashboard/DashboardHeader';
 import { KpiCard } from './dashboard/KpiCard';
+import { LowStockAlerts } from './dashboard/LowStockAlerts';
+import { RecentSalesList } from './dashboard/RecentSalesList';
 
 const overviewData = [
   { name: 'Mon', total: 1200 },
@@ -27,13 +20,6 @@ const overviewData = [
   { name: 'Fri', total: 2800 },
   { name: 'Sat', total: 1900 },
   { name: 'Sun', total: 2400 },
-];
-
-const recentSales = [
-  { name: 'Ahmed Moniem', email: 'ahmed@example.com', amount: '+$1,999.00' },
-  { name: 'Sarah Smith', email: 'sarah@example.com', amount: '+$39.00' },
-  { name: 'John Doe', email: 'john@example.com', amount: '+$299.00' },
-  { name: 'Isabella Nguyen', email: 'isabella@example.com', amount: '+$99.00' },
 ];
 
 export const Dashboard: React.FC = () => {
@@ -66,7 +52,6 @@ export const Dashboard: React.FC = () => {
   ];
   const isDashboardLoading = isLowStockLoading || isNearExpiryLoading;
   const recentSalesSkeletons = Array.from({ length: 4 });
-  const lowStockSkeletons = Array.from({ length: 3 });
 
   return (
     <div className="space-y-6">
@@ -146,81 +131,39 @@ export const Dashboard: React.FC = () => {
         </Card>
 
         <div className="grid gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Sales</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {isDashboardLoading
-                  ? recentSalesSkeletons.map((_, index) => (
-                      <div key={`recent-sales-skeleton-${index}`} className="flex items-center gap-4">
-                        <Skeleton className="h-9 w-9 rounded-full" />
-                        <div className="flex-1 space-y-2">
-                          <Skeleton className="h-4 w-32" />
-                          <Skeleton className="h-3 w-40" />
-                        </div>
-                        <Skeleton className="h-4 w-16" />
+          {isDashboardLoading ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Sales</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {recentSalesSkeletons.map((_, index) => (
+                    <div key={`recent-sales-skeleton-${index}`} className="flex items-center gap-4">
+                      <Skeleton className="h-9 w-9 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-40" />
                       </div>
-                    ))
-                  : recentSales.map((sale) => (
-                      <div key={sale.email} className="flex items-center">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
-                          <span className="text-sm font-semibold">{sale.name[0]}</span>
-                        </div>
-                        <div className="ml-4 space-y-1">
-                          <p className="text-sm font-medium leading-none text-foreground">{sale.name}</p>
-                          <p className="text-sm text-muted-foreground">{sale.email}</p>
-                        </div>
-                        <div className="ml-auto text-sm font-medium text-foreground">{sale.amount}</div>
-                      </div>
-                    ))}
-              </div>
-            </CardContent>
-          </Card>
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <RecentSalesList />
+          )}
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-                Low Stock Alerts
-              </CardTitle>
+          <LowStockAlerts
+            alerts={lowStockData ?? []}
+            isLoading={isLowStockLoading}
+            headerSlot={
               <span className="text-xs text-muted-foreground">
                 {isNearExpiryLoading ? '...' : nearExpiryData?.length ?? 0} near expiry
               </span>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {isLowStockLoading ? (
-                  lowStockSkeletons.map((_, index) => (
-                    <div key={`low-stock-skeleton-${index}`} className="space-y-2">
-                      <Skeleton className="h-4 w-40" />
-                      <Skeleton className="h-3 w-28" />
-                    </div>
-                  ))
-                ) : lowStockData?.length ? (
-                  lowStockData.slice(0, 4).map((item: { id?: number; name?: string; stock?: number; min?: number }) => (
-                    <div
-                      key={item.id ?? item.name}
-                      className="flex items-center justify-between border-b border-border/60 pb-2 last:border-0"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{item.name ?? 'Unnamed item'}</p>
-                        <p className="text-xs text-destructive">
-                          Only {item.stock ?? 0} left (Min: {item.min ?? '--'})
-                        </p>
-                      </div>
-                      <span className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive">
-                        Restock
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">No low stock alerts available.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+            }
+          />
         </div>
       </div>
 

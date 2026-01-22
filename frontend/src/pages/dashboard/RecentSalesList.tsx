@@ -1,9 +1,8 @@
 import * as React from "react"
-import { CreditCard, Receipt, Users } from "lucide-react"
+import { Receipt } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { SectionCard } from "@/pages/dashboard/SectionCard"
 
 const sales = [
@@ -39,6 +38,18 @@ const statusVariant = (status: string) => {
   return "secondary" as const
 }
 
+const getInitials = (name: string) => {
+  const parts = name
+    .split(" ")
+    .map((part) => part.trim())
+    .filter(Boolean)
+  const initials = parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("")
+  return initials || "NA"
+}
+
 export const RecentSalesList: React.FC = () => {
   return (
     <SectionCard
@@ -51,13 +62,16 @@ export const RecentSalesList: React.FC = () => {
         </Button>
       }
     >
-      <div className="space-y-4">
-        {sales.map((sale, index) => (
-          <div key={sale.id} className="space-y-4">
+      <div className="space-y-2">
+        {sales.map((sale) => (
+          <div
+            key={sale.id}
+            className="group rounded-xl border border-transparent px-3 py-3 transition-colors hover:border-border/60 hover:bg-muted/50"
+          >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                  <Users className="h-4 w-4" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                  {getInitials(sale.customer)}
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-foreground">
@@ -68,19 +82,17 @@ export const RecentSalesList: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 sm:text-right">
                 <Badge variant={statusVariant(sale.status)}>{sale.status}</Badge>
-                <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                <div className="min-w-[90px] text-right font-mono text-sm font-semibold text-foreground">
                   {sale.total}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
               <span>Channel</span>
               <Badge variant="secondary">{sale.channel}</Badge>
             </div>
-            {index < sales.length - 1 ? <Separator /> : null}
           </div>
         ))}
       </div>
