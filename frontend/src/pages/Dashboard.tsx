@@ -26,6 +26,17 @@ export const Dashboard: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const warehouseId = localStorage.getItem('selectedWarehouse');
+  const overviewTotals = overviewData.map((item) => item.total);
+  const maxTotal = Math.max(...overviewTotals);
+  const minTotal = Math.min(...overviewTotals);
+  const highestDay = overviewData.find((item) => item.total === maxTotal)?.name ?? 'N/A';
+  const lowestDay = overviewData.find((item) => item.total === minTotal)?.name ?? 'N/A';
+  const firstTotal = overviewData[0]?.total ?? 0;
+  const lastTotal = overviewData.at(-1)?.total ?? 0;
+  const changePercent = firstTotal
+    ? ((lastTotal - firstTotal) / firstTotal) * 100
+    : 0;
+  const formattedChange = `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(1)}%`;
 
   const {
     data: lowStockData,
@@ -125,29 +136,52 @@ export const Dashboard: React.FC = () => {
           </CardHeader>
           <CardContent className="pl-2">
             {isDashboardLoading ? (
-              <Skeleton className="h-[320px] w-full" />
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_160px]">
+                <Skeleton className="h-[320px] w-full" />
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
             ) : (
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={overviewData}>
-                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis
-                    stroke="#888888"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => `$${value}`}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'transparent' }}
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: 'none',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                    }}
-                  />
-                  <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_160px]">
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={overviewData}>
+                    <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `$${value}`}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'transparent' }}
+                      contentStyle={{
+                        borderRadius: '8px',
+                        border: 'none',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                      }}
+                    />
+                    <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="flex flex-col justify-between gap-4 rounded-lg border border-border/60 bg-muted/30 p-4 text-sm">
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Highest day</p>
+                    <p className="mt-1 font-semibold text-foreground">{highestDay}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Lowest day</p>
+                    <p className="mt-1 font-semibold text-foreground">{lowestDay}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Change vs Mon</p>
+                    <p className="mt-1 font-semibold text-foreground">{formattedChange}</p>
+                  </div>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
