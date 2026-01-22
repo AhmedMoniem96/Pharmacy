@@ -21,7 +21,7 @@ export const Sidebar: React.FC = () => {
     { to: '/products', icon: Package, label: t('products') },
     { to: '/purchasing', icon: Truck, label: t('purchasing') },
     { to: '/reports', icon: FileText, label: t('reports') },
-    { to: '/accounting', icon: Calculator, label: t('accounting'), disabled: true },
+    { to: '/accounting', icon: Calculator, label: t('accounting') },
     { to: '/settings', icon: Settings, label: t('settings') },
   ];
 
@@ -40,19 +40,12 @@ export const Sidebar: React.FC = () => {
                 'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
                 isActive
                   ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                item.disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               )
             }
-            onClick={(e) => item.disabled && e.preventDefault()}
           >
             <item.icon className="w-5 h-5" />
             <span className="font-medium">{item.label}</span>
-            {item.disabled && (
-              <span className="ml-auto text-xs bg-muted px-2 py-0.5 rounded-full">
-                {t('coming_soon')}
-              </span>
-            )}
           </NavLink>
         ))}
       </nav>
