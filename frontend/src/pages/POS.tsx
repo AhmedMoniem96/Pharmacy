@@ -109,6 +109,46 @@ export const POS: React.FC = () => {
     }
   });
 
+  const handlePrintReceipt = () => {
+    if (!lastReceipt) {
+      toast({ variant: 'destructive', title: t('error'), description: 'No receipt available to print.' });
+      return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=600,height=800');
+    if (!printWindow) {
+      toast({ variant: 'destructive', title: t('error'), description: 'Popup blocked. Please allow popups to print.' });
+      return;
+    }
+
+    const receiptJson = JSON.stringify(lastReceipt, null, 2);
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Receipt</title>
+          <style>
+            body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; padding: 24px; }
+            h1 { font-size: 18px; margin-bottom: 16px; }
+            pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <h1>Receipt</h1>
+          <pre>${receiptJson}</pre>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.onafterprint = () => printWindow.close();
+    };
+
+    toast({ title: t('success'), description: 'Receipt ready to print.' });
+  };
+
   const handleCheckout = () => {
     if (!branchId || !warehouseId) {
       toast({ variant: 'destructive', title: t('error'), description: t('select_branch_warehouse') });
@@ -273,7 +313,7 @@ export const POS: React.FC = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLastReceipt(null)}>{t('close')}</Button>
-            <Button><Printer className="mr-2 h-4 w-4" /> {t('print')}</Button>
+            <Button onClick={handlePrintReceipt}><Printer className="mr-2 h-4 w-4" /> {t('print')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
