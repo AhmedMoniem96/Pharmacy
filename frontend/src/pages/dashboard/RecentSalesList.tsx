@@ -3,6 +3,7 @@ import { Receipt } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { SectionCard } from "@/pages/dashboard/SectionCard"
 
 const sales = [
@@ -77,38 +78,59 @@ export const RecentSalesList: React.FC = () => {
       }
     >
       <div className="space-y-2">
-        {sales.map((sale) => (
-          <div
-            key={sale.id}
-            className="group rounded-xl border border-transparent px-3 py-3 transition-colors hover:border-border/60 hover:bg-muted/50"
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                  {getInitials(sale.customer)}
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-foreground">
-                    {sale.customer}
+        {sales.length ? (
+          sales.map((sale) => (
+            <div
+              key={sale.id}
+              className="group rounded-xl border border-transparent px-3 py-3 transition-colors hover:border-border/60 hover:bg-muted/50"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                    {getInitials(sale.customer)}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {sale.id} • {sale.time}
+                  <div>
+                    <div className="text-sm font-semibold text-foreground">
+                      {sale.customer}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {sale.id} • {sale.time}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 sm:text-right">
+                  <Badge variant={statusVariant(sale.status)}>
+                    {sale.status}
+                  </Badge>
+                  <div className="min-w-[90px] text-right font-mono text-sm font-semibold text-foreground">
+                    {sale.total}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 sm:text-right">
-                <Badge variant={statusVariant(sale.status)}>{sale.status}</Badge>
-                <div className="min-w-[90px] text-right font-mono text-sm font-semibold text-foreground">
-                  {sale.total}
-                </div>
+              <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Channel</span>
+                <Badge variant="secondary">{sale.channel}</Badge>
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Channel</span>
-              <Badge variant="secondary">{sale.channel}</Badge>
+          ))
+        ) : (
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/60 bg-muted/30 px-6 py-8 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <Receipt className="h-5 w-5" />
             </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                No recent sales yet
+              </p>
+              <p className="text-xs text-muted-foreground">
+                New invoices will show up here as soon as they’re recorded.
+              </p>
+            </div>
+            <Button asChild size="sm" variant="secondary">
+              <Link to={viewAllHref}>Open reports</Link>
+            </Button>
           </div>
-        ))}
+        )}
       </div>
     </SectionCard>
   )
