@@ -20,7 +20,7 @@ export const PurchaseOrders: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const { register, handleSubmit, reset, setValue, control } = useForm();
+  const { handleSubmit, reset, setValue, control } = useForm();
 
   const { data: purchaseOrders, isLoading } = useQuery({
     queryKey: ['purchaseOrdersList', search],

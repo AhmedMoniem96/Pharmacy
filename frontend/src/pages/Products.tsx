@@ -315,17 +315,21 @@ export const Products: React.FC = () => {
                           <SelectValue placeholder={t('manufacturer')} />
                         </SelectTrigger>
                         <SelectContent>
-                          {manufacturers?.map((man: any) => (
-                            <SelectItem key={man.id} value={String(man.id)}>{man.name}</SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="none" disabled>
-                            {manufacturersLoading ? t('loading') : t('no_data')}
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  )}
+                          {manufacturers?.length ? (
+                            manufacturers.map((man: any) => (
+                              <SelectItem key={man.id} value={String(man.id)}>
+                                {man.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="none" disabled>
+                              {manufacturersLoading ? t('loading') : t('no_data')}
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>{t('cancel')}</Button>

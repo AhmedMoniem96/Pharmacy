@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/api/axios';
@@ -32,7 +32,6 @@ export const Categories: React.FC = () => {
     register,
     handleSubmit,
     reset,
-    setValue,
     formState: { errors }
   } = useForm<CategoryFormValues>({
     defaultValues: {
@@ -41,21 +40,24 @@ export const Categories: React.FC = () => {
   });
 
   const {
-    data: categories,
+    data: categories = [],
     isLoading,
     isError
-  } = useQuery({
+  } = useQuery<Category[]>({
     queryKey: ['categoriesList', search],
     queryFn: async () => {
       const res = await api.get('/masterdata/categories/', {
         params: { search }
       });
       return res.data.results || res.data;
-    },
-    onError: () => {
-      toast({ variant: 'destructive', title: t('error'), description: t('category_load_failed') });
     }
   });
+
+  useEffect(() => {
+    if (isError) {
+      toast({ variant: 'destructive', title: t('error'), description: t('category_load_failed') });
+    }
+  }, [isError, t, toast]);
 
   const mutation = useMutation({
     mutationFn: async (data: CategoryFormValues) => {
@@ -140,12 +142,12 @@ export const Categories: React.FC = () => {
                   {t('category_load_failed')}
                 </TableCell>
               </TableRow>
-            ) : categories?.length === 0 ? (
+            ) : categories.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={2} className="text-center">{t('no_data')}</TableCell>
               </TableRow>
             ) : (
-              categories?.map((category: Category) => (
+              categories.map((category: Category) => (
                 <TableRow key={category.id}>
                   <TableCell className="font-medium">{category.name}</TableCell>
                   <TableCell className="text-right">
