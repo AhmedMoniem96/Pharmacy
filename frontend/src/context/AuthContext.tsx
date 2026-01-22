@@ -48,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (access: string, refresh: string) => {
     console.log('[AuthContext] Login successful, setting token.');
+    setIsLoading(true);
     localStorage.setItem('token', access);
     localStorage.setItem('refresh', refresh);
     setToken(access);
