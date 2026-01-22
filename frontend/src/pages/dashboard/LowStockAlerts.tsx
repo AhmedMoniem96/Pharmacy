@@ -1,78 +1,131 @@
 import * as React from "react"
-import { AlertTriangle, PackageSearch, ShoppingCart } from "lucide-react"
+import { AlertTriangle, PackageSearch } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 import { SectionCard } from "@/pages/dashboard/SectionCard"
 
-const alerts = [
-  {
-    name: "Amoxicillin 500mg",
-    sku: "RX-AML-500",
-    remaining: 18,
-    level: "critical",
-  },
-  {
-    name: "Insulin Glargine",
-    sku: "RX-ING-210",
-    remaining: 42,
-    level: "warning",
-  },
-  {
-    name: "Atorvastatin 20mg",
-    sku: "RX-ATO-020",
-    remaining: 63,
-    level: "attention",
-  },
-]
-
-const levelVariant = (level: string) => {
-  if (level === "critical") return "danger" as const
-  if (level === "warning") return "warning" as const
-  return "secondary" as const
+export interface LowStockItem {
+  id?: number
+  name?: string
+  stock?: number
+  min?: number
+  sku?: string
 }
 
-export const LowStockAlerts: React.FC = () => {
+interface LowStockAlertsProps {
+  alerts?: LowStockItem[]
+  isLoading?: boolean
+  headerSlot?: React.ReactNode
+}
+
+const getSeverity = (stock: number, min: number) => {
+  if (min > 0 && stock <= min * 0.5) {
+    return "Critical"
+  }
+  if (min <= 0 && stock <= 10) {
+    return "Critical"
+  }
+  return "Low"
+}
+
+const severityVariant = (severity: string) => {
+  if (severity === "Critical") return "danger" as const
+  return "warning" as const
+}
+
+export const LowStockAlerts: React.FC<LowStockAlertsProps> = ({
+  alerts = [],
+  isLoading = false,
+  headerSlot,
+}) => {
+  const skeletons = Array.from({ length: 3 })
+
   return (
     <SectionCard
       title="Low stock alerts"
-      description="Items nearing reorder thresholds"
+      description="Items approaching reorder thresholds"
       icon={AlertTriangle}
       headerSlot={
-        <Button variant="secondary" size="sm">
-          Review inventory
-        </Button>
+        headerSlot ?? (
+          <Button variant="secondary" size="sm">
+            Review inventory
+          </Button>
+        )
       }
     >
-      <div className="space-y-4">
-        {alerts.map((item, index) => (
-          <div key={item.sku} className="space-y-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  <PackageSearch className="h-4 w-4" />
+      <div className="space-y-3">
+        {isLoading ? (
+          skeletons.map((_, index) => (
+            <div key={`low-stock-skeleton-${index}`} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-28" />
                 </div>
-                <div>
-                  <div className="text-sm font-semibold text-foreground">
-                    {item.name}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {item.sku} • {item.remaining} units left
-                  </div>
-                </div>
+                <Skeleton className="h-7 w-20" />
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={levelVariant(item.level)}>{item.level}</Badge>
-                <Button size="sm" variant="outline" className="gap-1">
-                  <ShoppingCart className="h-4 w-4" />
-                  Reorder
-                </Button>
-              </div>
+              <Skeleton className="h-2 w-full" />
             </div>
-            {index < alerts.length - 1 ? <Separator /> : null}
-          </div>
-        ))}
+          ))
+        ) : alerts.length ? (
+          alerts.map((item) => {
+            const stock = item.stock ?? 0
+            const min = item.min ?? 0
+            const severity = getSeverity(stock, min)
+            const progress = min > 0 ? Math.min((stock / min) * 100, 100) : 0
+            const barClass =
+              severity === "Critical" ? "bg-rose-500" : "bg-amber-500"
+
+            return (
+              <div
+                key={item.id ?? item.sku ?? item.name}
+                className="rounded-xl border border-border/60 px-4 py-3 transition-colors hover:bg-muted/40"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                      <PackageSearch className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-foreground">
+                        {item.name ?? "Unnamed item"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {item.sku ? `${item.sku} • ` : ""}
+                        {stock} units left
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={severityVariant(severity)}>{severity}</Badge>
+                    <Button size="sm" variant="outline">
+                      Restock
+                    </Button>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{stock} remaining</span>
+                    <span>Min: {min || "--"}</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-muted">
+                    <div
+                      className={cn("h-2 rounded-full", barClass)}
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No low stock alerts available.
+          </p>
+        )}
       </div>
     </SectionCard>
   )
