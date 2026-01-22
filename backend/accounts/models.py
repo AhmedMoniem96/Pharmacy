@@ -13,6 +13,18 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.company.name}"
 
+def get_default_company():
+    company, _ = Company.objects.get_or_create(name="Main Pharmacy")
+    return company
+
+def ensure_user_profile(user):
+    profile = getattr(user, "profile", None)
+    if profile:
+        return profile
+    company = get_default_company()
+    role = "ADMIN" if user.is_staff or user.is_superuser else "STAFF"
+    return UserProfile.objects.create(user=user, company=company, role=role)
+
 def scoped_branches(user):
     if hasattr(user, 'profile'):
         return Branch.objects.filter(company=user.profile.company)
