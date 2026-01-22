@@ -85,6 +85,21 @@ export const PurchaseOrders: React.FC = () => {
     mutation.mutate(data);
   };
 
+  const getStatusStyles = (status: string) => {
+    switch (status?.toUpperCase()) {
+      case 'DRAFT':
+        return 'border-slate-200 bg-slate-100 text-slate-600';
+      case 'SUBMITTED':
+        return 'border-sky-200 bg-sky-100 text-sky-700';
+      case 'COMPLETED':
+        return 'border-emerald-200 bg-emerald-100 text-emerald-700';
+      case 'CANCELLED':
+        return 'border-rose-200 bg-rose-100 text-rose-700';
+      default:
+        return 'border-slate-200 bg-slate-100 text-slate-600';
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -101,7 +116,7 @@ export const PurchaseOrders: React.FC = () => {
         />
       </div>
 
-      <div className="border rounded-md">
+      <div className="rounded-2xl border border-slate-200/60 bg-white/80 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-950/40">
         <Table>
           <TableHeader>
             <TableRow>
@@ -125,7 +140,15 @@ export const PurchaseOrders: React.FC = () => {
                 <TableRow key={po.id}>
                   <TableCell className="font-medium">{po.po_number}</TableCell>
                   <TableCell>{po.supplier_name || po.supplier}</TableCell>
-                  <TableCell>{po.status}</TableCell>
+                  <TableCell>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${getStatusStyles(
+                        po.status
+                      )}`}
+                    >
+                      {po.status}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(po)}>
                       <Pencil className="h-4 w-4" />

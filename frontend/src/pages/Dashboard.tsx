@@ -35,9 +35,15 @@ export const Dashboard: React.FC = () => {
     { label: t('receive_stock'), icon: Truck, to: '/purchasing', color: 'from-amber-500/20 to-orange-500/10' },
   ];
 
+  const statusChips = [
+    { label: 'Live operations', tone: 'border-emerald-400/30 bg-emerald-400/10 text-emerald-50' },
+    { label: 'Inventory secure', tone: 'border-sky-300/30 bg-sky-400/10 text-sky-50' },
+    { label: 'Compliance synced', tone: 'border-amber-300/30 bg-amber-400/10 text-amber-50' },
+  ];
+
   return (
     <div className="space-y-8">
-      <Card className="relative overflow-hidden border-0 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-2xl">
+      <Card className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-2xl">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-400/20 blur-3xl" />
           <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl" />
@@ -52,15 +58,14 @@ export const Dashboard: React.FC = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <span className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/70">
-              Inventory intelligence
-            </span>
-            <span className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/70">
-              Luxe sales flow
-            </span>
-            <span className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/70">
-              Compliance ready
-            </span>
+            {statusChips.map((chip) => (
+              <span
+                key={chip.label}
+                className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide ${chip.tone}`}
+              >
+                {chip.label}
+              </span>
+            ))}
           </div>
         </CardContent>
       </Card>
