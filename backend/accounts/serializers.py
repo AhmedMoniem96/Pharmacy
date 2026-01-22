@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from masterdata.models import Branch, Company, Warehouse
 
-from .models import UserProfile, scoped_branches, scoped_warehouses
+from .models import UserProfile, has_timezone_column, scoped_branches, scoped_warehouses
 
 User = get_user_model()
 
@@ -30,6 +30,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     allowed_branches = serializers.SerializerMethodField()
     allowed_warehouses = serializers.SerializerMethodField()
     user = serializers.SerializerMethodField()
+    timezone = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfile
@@ -50,6 +51,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "email": obj.user.email,
             "full_name": obj.user.first_name or "",
         }
+
+    def get_timezone(self, obj):
+        if not has_timezone_column():
+            return ""
+        if "timezone" in obj.__dict__:
+            return obj.__dict__.get("timezone", "")
+        return obj.timezone
 
     def get_allowed_branches(self, obj):
         branches = scoped_branches(obj.user)
@@ -97,16 +105,20 @@ class UserProfileUpdateSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         user = instance.user
+        update_fields = []
         if "full_name" in validated_data:
             user.first_name = validated_data["full_name"]
         if "email" in validated_data:
             user.email = validated_data["email"]
         if "role" in validated_data:
             instance.role = validated_data["role"]
-        if "timezone" in validated_data:
+            update_fields.append("role")
+        if "timezone" in validated_data and has_timezone_column():
             instance.timezone = validated_data["timezone"]
+            update_fields.append("timezone")
         user.save()
-        instance.save()
+        if update_fields:
+            instance.save(update_fields=update_fields)
         return instance
 
 
