@@ -22,6 +22,7 @@
   "add_product": "إضافة منتج",
   "receive_stock": "استلام مخزون",
   "search_placeholder": "بحث...",
+  "pos_search_placeholder": "ابحث باسم الدواء أو الكود",
   "barcode": "الباركود",
   "name": "الاسم",
   "price": "السعر",
