@@ -27,7 +27,13 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const warehouseId = localStorage.getItem('selectedWarehouse');
 
-  const { data: lowStockData, isLoading: isLowStockLoading } = useQuery({
+  const {
+    data: lowStockData,
+    isLoading: isLowStockLoading,
+    dataUpdatedAt: lowStockUpdatedAt,
+    refetch: refetchLowStock,
+    isFetching: isLowStockFetching,
+  } = useQuery({
     queryKey: ['lowStockAlerts', warehouseId],
     queryFn: async () => {
       const { data } = await api.get(`/inventory/alerts/low-stock/?warehouse_id=${warehouseId}`);
@@ -36,7 +42,13 @@ export const Dashboard: React.FC = () => {
     enabled: !!warehouseId,
   });
 
-  const { data: nearExpiryData, isLoading: isNearExpiryLoading } = useQuery({
+  const {
+    data: nearExpiryData,
+    isLoading: isNearExpiryLoading,
+    dataUpdatedAt: nearExpiryUpdatedAt,
+    refetch: refetchNearExpiry,
+    isFetching: isNearExpiryFetching,
+  } = useQuery({
     queryKey: ['nearExpiryAlerts', warehouseId],
     queryFn: async () => {
       const { data } = await api.get(`/inventory/alerts/near-expiry/?warehouse_id=${warehouseId}&days=30`);
@@ -50,12 +62,22 @@ export const Dashboard: React.FC = () => {
     { label: t('add_product'), icon: Package, to: '/products', color: 'bg-emerald-500/10 text-emerald-500' },
     { label: t('receive_stock'), icon: Truck, to: '/purchasing', color: 'bg-amber-500/10 text-amber-500' },
   ];
+  const lastUpdatedAt = Math.max(lowStockUpdatedAt ?? 0, nearExpiryUpdatedAt ?? 0) || undefined;
+  const handleRefresh = () => {
+    void refetchLowStock();
+    void refetchNearExpiry();
+  };
   const isDashboardLoading = isLowStockLoading || isNearExpiryLoading;
+  const isDashboardRefreshing = isLowStockFetching || isNearExpiryFetching;
   const recentSalesSkeletons = Array.from({ length: 4 });
 
   return (
     <div className="space-y-6">
-      <DashboardHeader />
+      <DashboardHeader
+        lastUpdatedAt={lastUpdatedAt}
+        onRefresh={handleRefresh}
+        isRefreshing={isDashboardRefreshing}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
