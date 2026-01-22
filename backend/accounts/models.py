@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db import models
+from django.db import connection, models
 from masterdata.models import Company, Branch, Warehouse
 
 User = get_user_model()
@@ -18,8 +18,28 @@ def get_default_company():
     company, _ = Company.objects.get_or_create(name="Main Pharmacy")
     return company
 
+def has_timezone_column():
+    try:
+        with connection.cursor() as cursor:
+            columns = connection.introspection.get_table_description(
+                cursor, UserProfile._meta.db_table
+            )
+        return any(column.name == "timezone" for column in columns)
+    except Exception:
+        return True
+
+
+def get_user_profile(user):
+    if not user:
+        return None
+    queryset = UserProfile.objects.filter(user=user)
+    if not has_timezone_column():
+        queryset = queryset.defer("timezone")
+    return queryset.first()
+
+
 def ensure_user_profile(user):
-    profile = getattr(user, "profile", None)
+    profile = get_user_profile(user)
     if profile:
         return profile
     company = get_default_company()
@@ -27,17 +47,20 @@ def ensure_user_profile(user):
     return UserProfile.objects.create(user=user, company=company, role=role)
 
 def scoped_branches(user):
-    if hasattr(user, 'profile'):
-        return Branch.objects.filter(company=user.profile.company)
+    profile = get_user_profile(user)
+    if profile:
+        return Branch.objects.filter(company=profile.company)
     return Branch.objects.none()
 
 def scoped_warehouses(user):
-    if hasattr(user, 'profile'):
-        return Warehouse.objects.filter(branch__company=user.profile.company)
+    profile = get_user_profile(user)
+    if profile:
+        return Warehouse.objects.filter(branch__company=profile.company)
     return Warehouse.objects.none()
 
 def get_user_company(user):
-    return user.profile.company if hasattr(user, 'profile') else None
+    profile = get_user_profile(user)
+    return profile.company if profile else None
 
 class AuditLog(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)

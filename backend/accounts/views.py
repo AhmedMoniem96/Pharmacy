@@ -15,9 +15,9 @@ class MeView(APIView):
 
     def get(self, request):
         from .serializers import UserProfileSerializer
-        from .models import ensure_user_profile
+        from .models import ensure_user_profile, get_user_profile
 
-        profile = getattr(request.user, "profile", None)
+        profile = get_user_profile(request.user)
         if not profile:
             profile = ensure_user_profile(request.user)
 
@@ -30,9 +30,9 @@ class ProfileUpdateView(APIView):
 
     def put(self, request):
         from .serializers import UserProfileUpdateSerializer, UserProfileSerializer
-        from .models import ensure_user_profile
+        from .models import ensure_user_profile, get_user_profile
 
-        profile = getattr(request.user, "profile", None)
+        profile = get_user_profile(request.user)
         if not profile:
             profile = ensure_user_profile(request.user)
 
@@ -48,7 +48,7 @@ class InviteTeammateView(APIView):
 
     def post(self, request):
         from .serializers import InviteTeammateSerializer
-        from .models import ensure_user_profile, UserProfile
+        from .models import ensure_user_profile, get_user_profile, UserProfile
 
         serializer = InviteTeammateSerializer(data=request.data)
         if not serializer.is_valid():
@@ -74,7 +74,7 @@ class InviteTeammateView(APIView):
         invited_user.first_name = full_name
         invited_user.save()
 
-        inviter_profile = getattr(request.user, "profile", None)
+        inviter_profile = get_user_profile(request.user)
         if not inviter_profile:
             inviter_profile = ensure_user_profile(request.user)
 
