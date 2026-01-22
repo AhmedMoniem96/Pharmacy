@@ -18,6 +18,7 @@ export interface KpiCardProps {
   trend?: "up" | "down" | "neutral"
   icon: LucideIcon
   helperText?: string
+  freshnessBadge?: string
   isLoading?: boolean
 }
 
@@ -46,6 +47,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   trend = "neutral",
   icon,
   helperText = "Compared to last period",
+  freshnessBadge,
   isLoading = false,
 }) => {
   const trendMeta = trendStyles[trend]
@@ -75,8 +77,15 @@ export const KpiCard: React.FC<KpiCardProps> = ({
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="text-3xl font-semibold text-foreground sm:text-4xl">
-            {value}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-3xl font-semibold text-foreground sm:text-4xl">
+              {value}
+            </div>
+            {freshnessBadge ? (
+              <Badge variant="secondary" className="text-xs font-medium">
+                {freshnessBadge}
+              </Badge>
+            ) : null}
           </div>
           <Separator />
           <div className="text-sm text-muted-foreground">
