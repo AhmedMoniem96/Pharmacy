@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCcw } from 'lucide-react';
+import { useBranchWarehouse } from '@/context/BranchWarehouseContext';
 
 type DashboardHeaderProps = {
   lastUpdatedAt?: number;
@@ -10,6 +11,15 @@ type DashboardHeaderProps = {
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ lastUpdatedAt, onRefresh, isRefreshing }) => {
   const { t } = useTranslation();
+  const {
+    branches,
+    warehouses,
+    shortcuts,
+    selectedBranch,
+    selectedWarehouse,
+    setSelectedBranch,
+    setSelectedWarehouse,
+  } = useBranchWarehouse();
   const lastUpdatedLabel = useMemo(() => {
     if (!lastUpdatedAt) {
       return 'Last updated: --';
@@ -18,6 +28,28 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ lastUpdatedAt,
     const formattedTime = new Date(lastUpdatedAt).toLocaleString();
     return `Last updated: ${formattedTime}`;
   }, [lastUpdatedAt]);
+  const fallbackShortcut = useMemo(() => {
+    if (!selectedBranch || !selectedWarehouse) {
+      return [];
+    }
+
+    const branch = branches.find((item) => String(item.id) === selectedBranch);
+    const warehouse = warehouses.find((item) => String(item.id) === selectedWarehouse);
+
+    if (!branch || !warehouse) {
+      return [];
+    }
+
+    return [
+      {
+        branchId: selectedBranch,
+        warehouseId: selectedWarehouse,
+        branchName: branch.name,
+        warehouseName: warehouse.name,
+      },
+    ];
+  }, [branches, selectedBranch, selectedWarehouse, warehouses]);
+  const pillCombos = shortcuts.length ? shortcuts : fallbackShortcut;
 
   return (
     <div className="sticky top-0 z-20 -mx-6 border-b border-border/60 bg-background/80 px-6 py-4 backdrop-blur">
@@ -30,6 +62,39 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ lastUpdatedAt,
           <p className="mt-1 text-sm text-muted-foreground">
             Track performance, inventory health, and urgent alerts in one place.
           </p>
+          {pillCombos.length > 0 ? (
+            <div
+              className="mt-3 flex flex-wrap items-center gap-2"
+              role="group"
+              aria-label="Common branch and warehouse filters"
+              dir="ltr"
+            >
+              {pillCombos.map((combo) => {
+                const isActive =
+                  combo.branchId === selectedBranch && combo.warehouseId === selectedWarehouse;
+                return (
+                  <button
+                    key={`${combo.branchId}-${combo.warehouseId}`}
+                    type="button"
+                    onClick={() => {
+                      setSelectedBranch(combo.branchId);
+                      setSelectedWarehouse(combo.warehouseId);
+                    }}
+                    aria-pressed={isActive}
+                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                      isActive
+                        ? 'border-primary/40 bg-primary/10 text-foreground'
+                        : 'border-border/60 bg-background text-foreground hover:border-border hover:bg-muted/60'
+                    }`}
+                  >
+                    <span>{combo.branchName}</span>
+                    <span className="text-muted-foreground">/</span>
+                    <span>{combo.warehouseName}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-end justify-between gap-3 lg:justify-end">
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
