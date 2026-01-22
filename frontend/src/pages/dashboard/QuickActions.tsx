@@ -8,29 +8,32 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
+import { Card, CardContent } from "@/components/ui/card"
 import { SectionCard } from "@/pages/dashboard/SectionCard"
 
-const actions: Array<{ label: string; description: string; icon: LucideIcon }> = [
+const actions: Array<{
+  label: string
+  icon: LucideIcon
+  shortcut?: string
+}> = [
   {
     label: "Create purchase order",
-    description: "Draft a new supplier order",
     icon: FilePlus,
+    shortcut: "⌘ + N",
   },
   {
     label: "Receive shipment",
-    description: "Log incoming inventory",
     icon: Truck,
   },
   {
     label: "Add new product",
-    description: "Register a new SKU",
     icon: PackagePlus,
+    shortcut: "⌘ + P",
   },
   {
     label: "Sync stock counts",
-    description: "Refresh on-hand totals",
     icon: RefreshCcw,
+    shortcut: "⌘ + R",
   },
 ]
 
@@ -43,28 +46,34 @@ export const QuickActions: React.FC = () => {
       contentClassName="pt-2"
     >
       <div className="grid gap-3">
-        {actions.map((action, index) => {
+        {actions.map((action) => {
           const ActionIcon = action.icon
           return (
-            <div key={action.label} className="space-y-3">
-              <Button
-                variant="outline"
-                className="h-auto w-full justify-start gap-3 rounded-2xl border-border/60 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                  <ActionIcon className="h-4 w-4" />
-                </span>
-                <span className="flex flex-col">
-                  <span className="text-sm font-semibold text-foreground">
-                    {action.label}
+            <Card
+              key={action.label}
+              className="border-border/60 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:translate-y-0 active:shadow-sm"
+            >
+              <CardContent className="p-2">
+                <Button
+                  variant="ghost"
+                  className="h-auto w-full justify-start gap-3 rounded-2xl px-4 py-3 text-left hover:bg-muted/60 active:bg-muted/80"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                    <ActionIcon className="h-4 w-4" />
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {action.description}
+                  <span className="flex flex-1 items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-foreground">
+                      {action.label}
+                    </span>
+                    {action.shortcut ? (
+                      <span className="text-xs text-muted-foreground">
+                        {action.shortcut}
+                      </span>
+                    ) : null}
                   </span>
-                </span>
-              </Button>
-              {index < actions.length - 1 ? <Separator /> : null}
-            </div>
+                </Button>
+              </CardContent>
+            </Card>
           )
         })}
       </div>
