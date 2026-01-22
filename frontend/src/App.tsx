@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useAuth } from './context/AuthContext';
 import { Layout } from './components/Layout/Layout';
 import { Login } from './pages/Login';
-import { Dashboard } from './pages/Dashboard';
+import Dashboard from './pages/Dashboard';
 import { POS } from './pages/POS';
 import { Products } from './pages/Products';
 import { Purchasing } from './pages/Purchasing';
