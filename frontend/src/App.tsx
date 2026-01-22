@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard';
 import { POS } from './pages/POS';
 import { Products } from './pages/Products';
 import { Purchasing } from './pages/Purchasing';
+import Reports from './pages/Reports';
+import Settings from './pages/Settings';
 import { Toaster } from './components/ui/toaster';
 import { useTranslation } from 'react-i18next';
 
@@ -50,6 +52,8 @@ const App: React.FC = () => {
           <Route path="/pos" element={<POS />} />
           <Route path="/products" element={<Products />} />
           <Route path="/purchasing" element={<Purchasing />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
       <Toaster />
