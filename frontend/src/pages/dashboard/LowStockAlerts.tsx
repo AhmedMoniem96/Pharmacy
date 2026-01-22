@@ -1,5 +1,6 @@
 import * as React from "react"
 import { AlertTriangle, PackageSearch } from "lucide-react"
+import { Link } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -42,6 +43,7 @@ export const LowStockAlerts: React.FC<LowStockAlertsProps> = ({
   headerSlot,
 }) => {
   const skeletons = Array.from({ length: 3 })
+  const viewAllHref = "/products"
 
   return (
     <SectionCard
@@ -49,11 +51,28 @@ export const LowStockAlerts: React.FC<LowStockAlertsProps> = ({
       description="Items approaching reorder thresholds"
       icon={AlertTriangle}
       headerSlot={
-        headerSlot ?? (
-          <Button variant="secondary" size="sm">
-            Review inventory
-          </Button>
-        )
+        <div className="flex items-center gap-3">
+          {headerSlot ?? (
+            <Button variant="secondary" size="sm">
+              Review inventory
+            </Button>
+          )}
+          {viewAllHref ? (
+            <Link
+              className="text-xs font-medium text-muted-foreground transition hover:text-foreground hover:underline hover:decoration-muted-foreground/60 underline-offset-4"
+              to={viewAllHref}
+            >
+              View all
+            </Link>
+          ) : (
+            <span
+              className="cursor-not-allowed text-xs font-medium text-muted-foreground/60"
+              title="View all is unavailable"
+            >
+              View all
+            </span>
+          )}
+        </div>
       }
     >
       <div className="space-y-3">

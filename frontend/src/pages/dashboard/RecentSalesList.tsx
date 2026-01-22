@@ -1,8 +1,8 @@
 import * as React from "react"
 import { Receipt } from "lucide-react"
+import { Link } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { SectionCard } from "@/pages/dashboard/SectionCard"
 
 const sales = [
@@ -51,15 +51,29 @@ const getInitials = (name: string) => {
 }
 
 export const RecentSalesList: React.FC = () => {
+  const viewAllHref = "/reports"
+
   return (
     <SectionCard
       title="Recent sales"
       description="Latest invoices and order totals"
       icon={Receipt}
       headerSlot={
-        <Button variant="outline" size="sm">
-          View all
-        </Button>
+        viewAllHref ? (
+          <Link
+            className="text-xs font-medium text-muted-foreground transition hover:text-foreground hover:underline hover:decoration-muted-foreground/60 underline-offset-4"
+            to={viewAllHref}
+          >
+            View all
+          </Link>
+        ) : (
+          <span
+            className="cursor-not-allowed text-xs font-medium text-muted-foreground/60"
+            title="View all is unavailable"
+          >
+            View all
+          </span>
+        )
       }
     >
       <div className="space-y-2">
