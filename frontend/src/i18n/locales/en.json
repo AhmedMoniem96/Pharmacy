@@ -22,6 +22,7 @@
   "add_product": "Add Product",
   "receive_stock": "Receive Stock",
   "search_placeholder": "Search...",
+  "pos_search_placeholder": "Search by drug name or code",
   "barcode": "Barcode",
   "name": "Name",
   "price": "Price",

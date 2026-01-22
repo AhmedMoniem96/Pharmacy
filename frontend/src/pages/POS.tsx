@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/api/axios';
@@ -39,15 +39,28 @@ export const POS: React.FC = () => {
     searchInputRef.current?.focus();
   }, []);
 
+  const normalizedSearch = search.trim().toLowerCase();
+
   const { data: products, isLoading: isProductsLoading } = useQuery({
-    queryKey: ['products', search],
+    queryKey: ['products', normalizedSearch],
     queryFn: async () => {
-      if (!search) return [];
-      const res = await api.get(`/masterdata/products/?search=${search}`);
+      if (!normalizedSearch) return [];
+      const res = await api.get(`/masterdata/products/?search=${encodeURIComponent(normalizedSearch)}`);
       return res.data.results || res.data;
     },
-    enabled: search.length > 0,
+    enabled: normalizedSearch.length > 0,
   });
+
+  const filteredProducts = useMemo(() => {
+    if (!normalizedSearch) return [];
+    const matchesSearch = (product: Product) => {
+      const nameMatch = product.name?.toLowerCase().includes(normalizedSearch);
+      const barcodeMatch = product.barcode?.toLowerCase().includes(normalizedSearch);
+      return nameMatch || barcodeMatch;
+    };
+
+    return (products ?? []).filter(matchesSearch);
+  }, [products, normalizedSearch]);
 
   const addToCart = (product: Product) => {
     setCart(prev => {
@@ -123,13 +136,13 @@ export const POS: React.FC = () => {
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
             ref={searchInputRef}
-            placeholder={t('barcode')}
+            placeholder={t('pos_search_placeholder')}
             className="pl-9 h-12 text-lg"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && products?.length === 1) {
-                addToCart(products[0]);
+              if (e.key === 'Enter' && filteredProducts.length === 1) {
+                addToCart(filteredProducts[0]);
               }
             }}
           />
@@ -137,7 +150,7 @@ export const POS: React.FC = () => {
         
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto content-start">
           {isProductsLoading && <p>{t('loading')}...</p>}
-          {products?.map((product: Product) => (
+          {filteredProducts.map((product: Product) => (
             <Card 
               key={product.id} 
               className="cursor-pointer hover:border-primary transition-all"
