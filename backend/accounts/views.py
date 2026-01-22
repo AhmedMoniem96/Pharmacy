@@ -12,9 +12,18 @@ class MeView(APIView):
 
     def get(self, request):
         from .serializers import UserProfileSerializer
+        from .models import UserProfile
+        from masterdata.models import Company
+
         profile = getattr(request.user, "profile", None)
         if not profile:
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            # Fallback: Auto-create profile for superusers to prevent login lockouts
+            if request.user.is_superuser or request.user.is_staff:
+                company, _ = Company.objects.get_or_create(name="Main Pharmacy")
+                profile = UserProfile.objects.create(user=request.user, company=company, role="ADMIN")
+            else:
+                return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
         serializer = UserProfileSerializer(profile)
         return Response(serializer.data)
 
