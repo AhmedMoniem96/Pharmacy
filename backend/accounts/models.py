@@ -5,9 +5,22 @@ from masterdata.models import Company, Branch, Warehouse
 User = get_user_model()
 
 class UserProfile(models.Model):
+    class Role(models.TextChoices):
+        ADMIN = "ADMIN", "Admin"
+        MANAGER = "MANAGER", "Manager"
+        CASHIER = "CASHIER", "Cashier"
+        INVENTORY = "INVENTORY", "Inventory"
+        ACCOUNTANT = "ACCOUNTANT", "Accountant"
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
-    company = models.ForeignKey(Company, on_delete=models.CASCADE)
-    role = models.CharField(max_length=50, default="STAFF")
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="user_profiles")
+    role = models.CharField(max_length=20, choices=Role.choices)
+    allowed_branches = models.ManyToManyField(
+        Branch, blank=True, related_name="allowed_users"
+    )
+    allowed_warehouses = models.ManyToManyField(
+        Warehouse, blank=True, related_name="allowed_users"
+    )
     can_sell_expired = models.BooleanField(default=False)
     timezone = models.CharField(max_length=64, blank=True, default="")
 
@@ -43,18 +56,24 @@ def ensure_user_profile(user):
     if profile:
         return profile
     company = get_default_company()
-    role = "ADMIN" if user.is_staff or user.is_superuser else "STAFF"
+    role = UserProfile.Role.ADMIN if user.is_staff or user.is_superuser else UserProfile.Role.CASHIER
     return UserProfile.objects.create(user=user, company=company, role=role)
 
 def scoped_branches(user):
     profile = get_user_profile(user)
     if profile:
+        allowed = profile.allowed_branches.all()
+        if allowed.exists():
+            return allowed
         return Branch.objects.filter(company=profile.company)
     return Branch.objects.none()
 
 def scoped_warehouses(user):
     profile = get_user_profile(user)
     if profile:
+        allowed = profile.allowed_warehouses.all()
+        if allowed.exists():
+            return allowed
         return Warehouse.objects.filter(branch__company=profile.company)
     return Warehouse.objects.none()
 
